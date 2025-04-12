@@ -15,23 +15,20 @@ const renderer = new THREE.WebGLRenderer({
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x222222);
+renderer.outputColorSpace = THREE.SRGBColorSpace; // Keep this
 
 // --- Lighting ---
-// --- INCREASE AMBIENT LIGHT ---
-const ambientLight = new THREE.AmbientLight(0x404040, 1.0); // Increased intensity slightly
+// --- INCREASE AMBIENT LIGHT SIGNIFICANTLY ---
+const ambientLight = new THREE.AmbientLight(0x505050, 2.0); // Brighter gray color, higher intensity
 scene.add(ambientLight);
 // --- END INCREASE ---
 
 // --- ADJUST POINT LIGHT ---
-// Increased intensity significantly, increased distance, maybe lower y position slightly
-const pointLight = new THREE.PointLight(0xffffff, 5.0, 50); // Color, MUCH HIGHER Intensity, LONGER Distance
-pointLight.position.set(0, 0.5, 0); // Lowered Y position slightly
+// Keep high intensity, set distance to 0 (infinite), reposition centrally
+const pointLight = new THREE.PointLight(0xffffff, 15.0, 0); // Intensity 15.0, Distance 0 (Infinite)
+pointLight.position.set(0, 1.5, 0); // Centered X/Z, slightly higher Y
 scene.add(pointLight);
-
-// --- COMMENT OUT HELPER ---
-// const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
-// scene.add(pointLightHelper); // Commented out for final look
-// --- END COMMENT OUT ---
+// --- END ADJUST POINT LIGHT ---
 
 // --- Room Dimensions ---
 const roomWidth = 10;
@@ -114,7 +111,8 @@ scene.add(frame2);
 
 // --- Camera Setup ---
 const playerHeight = 1.7;
-camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 3);
+const initialCameraZ = roomDepth / 2 - 3; // Store for consistency
+camera.position.set(0, -roomHeight / 2 + playerHeight, initialCameraZ);
 camera.rotation.order = 'YXZ';
 camera.rotation.x = 0;
 const baseCameraY = camera.position.y;
@@ -139,16 +137,19 @@ document.addEventListener('click', () => { document.body.style.cursor = 'default
 // --- Post Processing ---
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
+
+// --- RESTORE DITHER PASS ---
 const DitheringShader = {
     uniforms: { 'tDiffuse': { value: null }, 'resolution': { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) }, 'uDitherPatternLevel': { value: 1 } },
     vertexShader: /* glsl */` varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); } `,
     fragmentShader: /* glsl */` uniform sampler2D tDiffuse; uniform vec2 resolution; uniform int uDitherPatternLevel; varying vec2 vUv; const mat2 bayer2 = mat2(0.0, 2.0, 3.0, 1.0) / 4.0; const mat4 bayer4 = mat4( 0.0,  8.0,  2.0, 10.0, 12.0,  4.0, 14.0,  6.0, 3.0, 11.0,  1.0,  9.0, 15.0,  7.0, 13.0,  5.0) / 16.0; const mat4 bayer8_TL = mat4( 0.0, 32.0,  8.0, 40.0, 48.0, 16.0, 56.0, 24.0, 12.0, 44.0,  4.0, 36.0, 60.0, 28.0, 52.0, 20.0); const mat4 bayer8_TR = mat4( 2.0, 34.0, 10.0, 42.0, 50.0, 18.0, 58.0, 26.0, 14.0, 46.0,  6.0, 38.0, 62.0, 30.0, 54.0, 22.0); const mat4 bayer8_BL = mat4( 3.0, 35.0, 11.0, 43.0, 51.0, 19.0, 59.0, 27.0, 15.0, 47.0,  7.0, 39.0, 63.0, 31.0, 55.0, 23.0); const mat4 bayer8_BR = mat4( 1.0, 33.0,  9.0, 41.0, 49.0, 17.0, 57.0, 25.0, 13.0, 45.0,  5.0, 37.0, 61.0, 29.0, 53.0, 21.0); float getBayerThreshold(int x, int y, int level) { if (level == 0) { ivec2 p = ivec2(mod(float(x), 2.0), mod(float(y), 2.0)); return bayer2[p.x][p.y]; } else if (level == 1) { ivec2 p = ivec2(mod(float(x), 4.0), mod(float(y), 4.0)); return bayer4[p.x][p.y]; } else { ivec2 p = ivec2(mod(float(x), 8.0), mod(float(y), 8.0)); float value; if (p.x < 4 && p.y < 4) { value = bayer8_TL[p.x][p.y]; } else if (p.x >= 4 && p.y < 4) { value = bayer8_TR[p.x - 4][p.y]; } else if (p.x < 4 && p.y >= 4) { value = bayer8_BL[p.x][p.y - 4]; } else { value = bayer8_BR[p.x - 4][p.y - 4]; } return value / 64.0; } } float luminance(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); } void main() { ivec2 screenCoord = ivec2(gl_FragCoord.xy); float threshold = getBayerThreshold(screenCoord.x, screenCoord.y, uDitherPatternLevel); vec4 texColor = texture2D(tDiffuse, vUv); float lum = luminance(texColor.rgb); vec3 ditheredColor = (lum < threshold) ? vec3(0.0) : texColor.rgb; gl_FragColor = vec4(ditheredColor, texColor.a); } `
 };
 const ditherPass = new ShaderPass(DitheringShader);
-composer.addPass(ditherPass);
+composer.addPass(ditherPass); // Add the pass back to the composer
+// --- END RESTORE ---
+
 
 // --- Animation Loop ---
-// (Movement, Collision, Bobbing code remains the same)
 const clock = new THREE.Clock();
 let previousTime = 0;
 function animate() {
@@ -156,6 +157,7 @@ function animate() {
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - previousTime;
     previousTime = elapsedTime;
+    // (Movement, Collision, Bobbing code remains the same)
     let currentlyMovingForwardOrBackward = false;
     const currentMoveSpeed = moveSpeed * deltaTime;
     const moveDirection = new THREE.Vector3();
@@ -189,6 +191,8 @@ function animate() {
         else { camera.position.y = baseCameraY; }
     }
     camera.rotation.x = 0;
+
+    // Render using the composer
     composer.render(deltaTime);
 }
 
@@ -197,7 +201,9 @@ function animate() {
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    composer.setSize(window.innerWidth, window.innerHeight); composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    composer.setSize(window.innerWidth, window.innerHeight);
+    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Need to update ditherPass resolution again
     if (ditherPass && ditherPass.uniforms.resolution) {
         ditherPass.uniforms.resolution.value.set(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio);
     }
@@ -208,4 +214,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("Increased light intensities, extended distance, and removed helper.");
+console.log("Restored dither pass, increased ambient light, set PointLight distance to 0.");
