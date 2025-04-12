@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D WebGL Gallery</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Oak Ridge Project</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #000; }
+        canvas { display: block; }
+        /* Add any other styles needed, like for the old instructions div if you keep it */
+    </style>
 </head>
 <body>
-    <canvas id="webgl-canvas"></canvas>
-
-    <!-- Import map for Three.js modules from CDN -->
+    <!-- Import Map: Tells browser where to find 'three' -->
     <script type="importmap">
         {
             "imports": {
@@ -19,7 +21,10 @@
         }
     </script>
 
-    <!-- Your main application script -->
+    <!-- Canvas for Three.js -->
+    <canvas id="webgl-canvas"></canvas>
+
+    <!-- Load your main script as a module -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
