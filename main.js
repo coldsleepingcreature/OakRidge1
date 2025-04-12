@@ -17,21 +17,21 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setClearColor(0x222222);
 
 // --- Lighting ---
-// Remove or comment out ambient light if we only want point light effect,
-// or keep it for subtle fill light. Let's keep it for now.
-const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Reduced intensity
+// --- INCREASE AMBIENT LIGHT ---
+const ambientLight = new THREE.AmbientLight(0x404040, 1.0); // Increased intensity slightly
 scene.add(ambientLight);
+// --- END INCREASE ---
 
-// --- ADD POINT LIGHT ---
-const pointLight = new THREE.PointLight(0xffffff, 1.5, 20); // Color, Intensity, Distance
-// Position it roughly in the middle, slightly above player height
-pointLight.position.set(0, 1, 0); // x, y, z
+// --- ADJUST POINT LIGHT ---
+// Increased intensity significantly, increased distance, maybe lower y position slightly
+const pointLight = new THREE.PointLight(0xffffff, 5.0, 50); // Color, MUCH HIGHER Intensity, LONGER Distance
+pointLight.position.set(0, 0.5, 0); // Lowered Y position slightly
 scene.add(pointLight);
 
-// Optional: Add a helper to visualize the point light's position
-const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5); // Light, size
-scene.add(pointLightHelper); // Comment this out for final look
-// --- END ADD POINT LIGHT ---
+// --- COMMENT OUT HELPER ---
+// const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5);
+// scene.add(pointLightHelper); // Commented out for final look
+// --- END COMMENT OUT ---
 
 // --- Room Dimensions ---
 const roomWidth = 10;
@@ -39,23 +39,20 @@ const roomHeight = 6;
 const roomDepth = 15;
 
 // --- Materials ---
-// --- CHANGE WALL MATERIAL TO STANDARD ---
 const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0x888888,     // Base color (mid-gray)
-    roughness: 0.8,      // Make it less shiny
-    metalness: 0.2,      // Make it slightly metallic (optional)
+    color: 0x888888,
+    roughness: 0.8,
+    metalness: 0.2,
     side: THREE.DoubleSide
 });
-// --- END CHANGE ---
-
-const frameMaterial = new THREE.MeshBasicMaterial({ // Keep frames basic for now
-    color: 0x00ff00, // Neon Green
+const frameMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00ff00,
     side: THREE.DoubleSide
 });
 
 // --- Geometry Creation ---
 const collidableObjects = [];
-// Floor, Ceiling, Walls, Frames code remains the same, but walls will now use MeshStandardMaterial
+// Floor, Ceiling, Walls, Frames code remains the same
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
@@ -151,17 +148,14 @@ const ditherPass = new ShaderPass(DitheringShader);
 composer.addPass(ditherPass);
 
 // --- Animation Loop ---
+// (Movement, Collision, Bobbing code remains the same)
 const clock = new THREE.Clock();
 let previousTime = 0;
-
 function animate() {
     requestAnimationFrame(animate);
-
     const elapsedTime = clock.getElapsedTime();
     const deltaTime = elapsedTime - previousTime;
     previousTime = elapsedTime;
-
-    // (Movement, Collision, Bobbing code remains the same)
     let currentlyMovingForwardOrBackward = false;
     const currentMoveSpeed = moveSpeed * deltaTime;
     const moveDirection = new THREE.Vector3();
@@ -174,7 +168,7 @@ function animate() {
     if (applyMovement) {
         const moveVector = moveDirection.clone().multiplyScalar(currentMoveSpeed);
         const moveLength = moveVector.length();
-        raycaster.set(camera.position, moveDirection.normalize()); // Ensure normalized direction
+        raycaster.set(camera.position, moveDirection.normalize());
         const intersects = raycaster.intersectObjects(collidableObjects);
         if (intersects.length > 0 && intersects[0].distance < moveLength + playerRadius) {
             collisionDetected = true;
@@ -195,10 +189,9 @@ function animate() {
         else { camera.position.y = baseCameraY; }
     }
     camera.rotation.x = 0;
-
-    // Render using the composer
     composer.render(deltaTime);
 }
+
 
 // --- Handle Window Resize ---
 window.addEventListener('resize', () => {
@@ -215,4 +208,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("Switched wall material to MeshStandardMaterial and added PointLight.");
+console.log("Increased light intensities, extended distance, and removed helper.");
