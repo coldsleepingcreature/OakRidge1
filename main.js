@@ -1,4 +1,4 @@
-import * as THREE from 'three'; // <-- ENSURE THIS LINE IS PRESENT
+import * as THREE from 'three';
 // Import post-processing modules
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
@@ -28,7 +28,7 @@ const roomDepth = 15;
 // --- Materials ---
 const wallMaterial = new THREE.MeshBasicMaterial({
     color: 0x888888, // Mid-gray for walls/floor/ceiling
-    side: THREE.DoubleSide
+    side: THREE.DoubleSide // Ensures walls are visible from inside
 });
 const frameMaterial = new THREE.MeshBasicMaterial({
     color: 0x00ff00, // Neon Green
@@ -44,7 +44,7 @@ const floor = new THREE.Mesh(floorGeometry, wallMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -roomHeight / 2;
 scene.add(floor);
-collidableObjects.push(floor); // Add to collidables
+collidableObjects.push(floor);
 
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
@@ -52,7 +52,7 @@ const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
-collidableObjects.push(ceiling); // Add to collidables
+collidableObjects.push(ceiling);
 
 // Back Wall
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
@@ -60,7 +60,7 @@ const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
 backWall.position.z = -roomDepth / 2;
 backWall.position.y = 0;
 scene.add(backWall);
-collidableObjects.push(backWall); // Add to collidables
+collidableObjects.push(backWall);
 
 // Left Wall
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
@@ -69,7 +69,7 @@ leftWall.rotation.y = Math.PI / 2;
 leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = 0;
 scene.add(leftWall);
-collidableObjects.push(leftWall); // Add to collidables
+collidableObjects.push(leftWall);
 
 // Right Wall
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
@@ -78,7 +78,18 @@ rightWall.rotation.y = -Math.PI / 2;
 rightWall.position.x = roomWidth / 2;
 rightWall.position.y = 0;
 scene.add(rightWall);
-collidableObjects.push(rightWall); // Add to collidables
+collidableObjects.push(rightWall);
+
+// --- ADD FRONT WALL ---
+const frontWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
+const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
+frontWall.position.z = roomDepth / 2; // Position at the positive z boundary
+frontWall.rotation.y = Math.PI; // Rotate to face inwards
+frontWall.position.y = 0;
+scene.add(frontWall);
+collidableObjects.push(frontWall); // Add to collidables
+// --- END ADD FRONT WALL ---
+
 
 // Frame 1
 const frameWidth = 2.5; const frameHeight = 1.8; const frameDepthOffset = 0.01;
@@ -96,6 +107,7 @@ scene.add(frame2);
 
 // --- Camera Setup ---
 const playerHeight = 1.7;
+// Start slightly further from the back wall, now also away from the front wall
 camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 3);
 camera.rotation.order = 'YXZ';
 camera.rotation.x = 0;
@@ -173,7 +185,7 @@ function animate() {
         const moveLength = moveVector.length();
 
         // Ensure moveDirection is normalized before setting raycaster
-        moveDirection.normalize(); // Normalize the direction vector
+        // Note: moveDirection is already normalized from .set().applyEuler() if W/S is pressed
         raycaster.set(camera.position, moveDirection);
 
         const intersects = raycaster.intersectObjects(collidableObjects);
@@ -181,7 +193,7 @@ function animate() {
         if (intersects.length > 0) {
             if (intersects[0].distance < moveLength + playerRadius) {
                 collisionDetected = true;
-                // console.log("Collision detected!"); // Keep console log minimal unless debugging
+                // console.log("Collision detected!");
             }
         }
 
@@ -231,4 +243,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("Basic wall collision detection added (Scope Fixed).");
+console.log("Front wall added and included in collisions.");
