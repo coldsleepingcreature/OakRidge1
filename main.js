@@ -19,13 +19,13 @@ const roomHeight = 6;
 const roomDepth = 15; // Making it deeper than wide
 
 // --- Materials ---
-// A simple dark grey material for the room surfaces
+// A simple black material for the room surfaces
 const wallMaterial = new THREE.MeshBasicMaterial({
     color: #000000, // Black
     side: THREE.DoubleSide // Render both sides (important for walls viewed from inside)
 });
 
-// A contrasting material for the frames (e.g., white)
+// A contrasting material for the frames (e.g., Dark grey)
 const frameMaterial = new THREE.MeshBasicMaterial({
     color: 0x333333, // Dark grey
     side: THREE.DoubleSide // Render both sides
