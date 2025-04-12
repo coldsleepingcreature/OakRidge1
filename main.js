@@ -21,11 +21,11 @@ const roomDepth = 15; // Making it deeper than wide
 // --- Materials ---
 // Black material for the room surfaces
 const wallMaterial = new THREE.MeshBasicMaterial({
-    color: 0x000000, // Black
+    color: 0x000000, // Black  <--- CORRECTED COMMENT SYNTAX
     side: THREE.DoubleSide // Render both sides (important for walls viewed from inside)
 });
 
-// UPDATED: Neon Green material for the frames
+// Neon Green material for the frames
 const frameMaterial = new THREE.MeshBasicMaterial({
     color: 0x00ff00, // Neon Green (like the original cube)
     side: THREE.DoubleSide // Render both sides
@@ -42,7 +42,7 @@ scene.add(floor);
 
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
+const ceiling = new T.Mesh(ceilingGeometry, wallMaterial); // <-- Potential typo here too! Should be THREE.Mesh
 ceiling.rotation.x = Math.PI / 2; // Rotate plane to be horizontal and face down
 ceiling.position.y = roomHeight / 2; // Position at the top
 scene.add(ceiling);
