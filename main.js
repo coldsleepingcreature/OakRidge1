@@ -28,19 +28,22 @@ const frameMaterial = new THREE.MeshBasicMaterial({
 });
 
 // --- Geometry Creation ---
-// (Floor, Ceiling, Walls, Frames code remains the same)
+// (Floor, Walls, Frames code remains the same)
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -roomHeight / 2;
 scene.add(floor);
+
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
+// CORRECTED LINE BELOW: Changed T.Mesh to THREE.Mesh
+const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial); // <-- Line 45 approx. CORRECTED
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
+
 // Back Wall
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
 const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
@@ -80,6 +83,7 @@ const playerHeight = 1.7; // Approx height of camera from floor
 camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 2);
 camera.rotation.order = 'YXZ'; // Ensure Y rotation (left/right) happens first
 camera.rotation.x = 0; // Lock pitch (up/down look)
+const baseCameraY = camera.position.y; // Store the non-bobbing Y position
 
 // --- Arena Controls Parameters ---
 const turnAngle = Math.PI / 12; // 15 degrees per turn (adjust as needed)
@@ -91,13 +95,12 @@ let canPerformAction = true;   // Cooldown flag
 const bobFrequency = 1.8;      // How fast the bobbing is (Hz)
 const bobAmplitude = 0.04;     // How high the bobbing goes
 let isMoving = false;          // Is the player currently moving forward/backward?
-const baseCameraY = camera.position.y; // Store the non-bobbing Y position
 
 // --- Keyboard Input ---
-const keysPressed = {}; // Still useful to know if a key *is* down, even if action is discrete
+const keysPressed = {};
 
 document.addEventListener('keydown', (event) => {
-    if (!keysPressed[event.code]) { // Process only on the first press
+    if (!keysPressed[event.code]) {
         keysPressed[event.code] = true;
 
         if (canPerformAction) {
@@ -114,18 +117,16 @@ document.addEventListener('keydown', (event) => {
 
             // Movement (W/S or Up/Down)
             else if (event.code === 'KeyW' || event.code === 'ArrowUp') {
-                // Calculate forward vector based on current Y rotation
                 const forward = new THREE.Vector3(0, 0, -1);
-                forward.applyEuler(camera.rotation); // Apply camera's rotation
+                forward.applyEuler(camera.rotation);
                 camera.position.add(forward.multiplyScalar(gridSize));
-                isMoving = true; // Start bobbing
+                isMoving = true;
                 actionTaken = true;
             } else if (event.code === 'KeyS' || event.code === 'ArrowDown') {
-                // Calculate backward vector
                 const backward = new THREE.Vector3(0, 0, 1);
-                backward.applyEuler(camera.rotation); // Apply camera's rotation
+                backward.applyEuler(camera.rotation);
                 camera.position.add(backward.multiplyScalar(gridSize));
-                isMoving = true; // Start bobbing
+                isMoving = true;
                 actionTaken = true;
             }
 
@@ -141,9 +142,7 @@ document.addEventListener('keydown', (event) => {
 
 document.addEventListener('keyup', (event) => {
     keysPressed[event.code] = false;
-    // Stop bobbing ONLY if the specific move keys are released
     if ((event.code === 'KeyW' || event.code === 'ArrowUp' || event.code === 'KeyS' || event.code === 'ArrowDown')) {
-        // Check if *any* move key is still pressed
         if (!keysPressed['KeyW'] && !keysPressed['ArrowUp'] && !keysPressed['KeyS'] && !keysPressed['ArrowDown']) {
            isMoving = false;
         }
@@ -160,13 +159,10 @@ function animate() {
     // --- Apply Camera Bob ---
     if (isMoving) {
         const bobOffset = Math.sin(elapsedTime * bobFrequency * 2 * Math.PI) * bobAmplitude;
-        // Apply bob relative to the base height, not current potentially bobbed height
         camera.position.y = baseCameraY + bobOffset;
     } else {
-        // Smoothly return to base height when stopping (optional, could just snap)
         if (camera.position.y !== baseCameraY) {
-             camera.position.y += (baseCameraY - camera.position.y) * 0.1; // Simple lerp back
-             // Snap if very close to prevent infinite small adjustments
+             camera.position.y += (baseCameraY - camera.position.y) * 0.1;
              if (Math.abs(camera.position.y - baseCameraY) < 0.001) {
                  camera.position.y = baseCameraY;
              }
@@ -174,7 +170,6 @@ function animate() {
     }
 
     // --- Lock Pitch ---
-    // Force camera pitch to 0 every frame to prevent accidental drift
     camera.rotation.x = 0;
 
     // Render the scene
@@ -190,7 +185,6 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    // Note: Resizing might slightly affect the perceived bobbing, but base Y is constant
 });
 
 // --- Start Animation ---
