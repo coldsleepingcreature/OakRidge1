@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-// PointerLockControls are no longer needed
 
 // --- Basic Setup ---
 const scene = new THREE.Scene();
@@ -28,7 +27,6 @@ const frameMaterial = new THREE.MeshBasicMaterial({
 });
 
 // --- Geometry Creation ---
-// (Floor, Walls, Frames code remains the same)
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
@@ -38,8 +36,8 @@ scene.add(floor);
 
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-// CORRECTED LINE BELOW: Changed T.Mesh to THREE.Mesh
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial); // <-- Line 45 approx. CORRECTED
+// Ensure this line is correct:
+const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial); // Using THREE.Mesh
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
@@ -50,6 +48,7 @@ const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
 backWall.position.z = -roomDepth / 2;
 backWall.position.y = 0;
 scene.add(backWall);
+
 // Left Wall
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
@@ -57,6 +56,7 @@ leftWall.rotation.y = Math.PI / 2;
 leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = 0;
 scene.add(leftWall);
+
 // Right Wall
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
@@ -64,12 +64,14 @@ rightWall.rotation.y = -Math.PI / 2;
 rightWall.position.x = roomWidth / 2;
 rightWall.position.y = 0;
 scene.add(rightWall);
+
 // Frame 1
 const frameWidth = 2.5; const frameHeight = 1.8; const frameDepthOffset = 0.01;
 const frame1Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
 const frame1 = new THREE.Mesh(frame1Geometry, frameMaterial);
 frame1.position.set(-roomWidth / 4, 0, -roomDepth / 2 + frameDepthOffset);
 scene.add(frame1);
+
 // Frame 2
 const frame2Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
 const frame2 = new THREE.Mesh(frame2Geometry, frameMaterial);
@@ -79,22 +81,22 @@ scene.add(frame2);
 
 
 // --- Camera Setup ---
-const playerHeight = 1.7; // Approx height of camera from floor
+const playerHeight = 1.7;
 camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 2);
-camera.rotation.order = 'YXZ'; // Ensure Y rotation (left/right) happens first
-camera.rotation.x = 0; // Lock pitch (up/down look)
-const baseCameraY = camera.position.y; // Store the non-bobbing Y position
+camera.rotation.order = 'YXZ';
+camera.rotation.x = 0;
+const baseCameraY = camera.position.y;
 
 // --- Arena Controls Parameters ---
-const turnAngle = Math.PI / 12; // 15 degrees per turn (adjust as needed)
-const gridSize = 1.0;          // How far to move in one step
-const actionCooldown = 150;    // Milliseconds between actions
-let canPerformAction = true;   // Cooldown flag
+const turnAngle = Math.PI / 12; // 15 degrees
+const gridSize = 1.0;
+const actionCooldown = 150; // ms
+let canPerformAction = true;
 
 // --- Camera Bobbing Parameters ---
-const bobFrequency = 1.8;      // How fast the bobbing is (Hz)
-const bobAmplitude = 0.04;     // How high the bobbing goes
-let isMoving = false;          // Is the player currently moving forward/backward?
+const bobFrequency = 1.8; // Hz
+const bobAmplitude = 0.04;
+let isMoving = false;
 
 // --- Keyboard Input ---
 const keysPressed = {};
@@ -106,7 +108,7 @@ document.addEventListener('keydown', (event) => {
         if (canPerformAction) {
             let actionTaken = false;
 
-            // Turning (A/D or Left/Right)
+            // Turning
             if (event.code === 'KeyA' || event.code === 'ArrowLeft') {
                 camera.rotation.y += turnAngle;
                 actionTaken = true;
@@ -115,7 +117,7 @@ document.addEventListener('keydown', (event) => {
                 actionTaken = true;
             }
 
-            // Movement (W/S or Up/Down)
+            // Movement
             else if (event.code === 'KeyW' || event.code === 'ArrowUp') {
                 const forward = new THREE.Vector3(0, 0, -1);
                 forward.applyEuler(camera.rotation);
@@ -154,29 +156,28 @@ document.addEventListener('keyup', (event) => {
 const clock = new THREE.Clock();
 
 function animate() {
+    requestAnimationFrame(animate); // Request next frame first
+
     const elapsedTime = clock.getElapsedTime();
 
-    // --- Apply Camera Bob ---
+    // Apply Camera Bob
     if (isMoving) {
         const bobOffset = Math.sin(elapsedTime * bobFrequency * 2 * Math.PI) * bobAmplitude;
         camera.position.y = baseCameraY + bobOffset;
     } else {
-        if (camera.position.y !== baseCameraY) {
+        // Smooth return to base height
+        if (Math.abs(camera.position.y - baseCameraY) > 0.001) {
              camera.position.y += (baseCameraY - camera.position.y) * 0.1;
-             if (Math.abs(camera.position.y - baseCameraY) < 0.001) {
-                 camera.position.y = baseCameraY;
-             }
+        } else {
+             camera.position.y = baseCameraY; // Snap if close
         }
     }
 
-    // --- Lock Pitch ---
+    // Lock Pitch
     camera.rotation.x = 0;
 
-    // Render the scene
+    // Render
     renderer.render(scene, camera);
-
-    // Request the next frame
-    requestAnimationFrame(animate);
 }
 
 // --- Handle Window Resize ---
@@ -190,4 +191,4 @@ window.addEventListener('resize', () => {
 // --- Start Animation ---
 animate();
 
-console.log("Arena-style controls initialized. Use WASD/Arrows.");
+console.log("Arena-style controls initialized. Use WASD/Arrows. Verify T.Mesh error is gone.");
