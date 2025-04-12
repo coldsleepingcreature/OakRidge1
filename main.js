@@ -14,21 +14,16 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0x000000); // Set clear color to black for consistency
+renderer.setClearColor(0x000000); // Black background
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 // --- Lighting ---
-// --- DRASTICALLY REDUCE AMBIENT LIGHT ---
-const ambientLight = new THREE.AmbientLight(0x404040, 0.1); // Very low intensity
+// Keep lighting from previous step (low ambient, strong point)
+const ambientLight = new THREE.AmbientLight(0x404040, 0.1);
 scene.add(ambientLight);
-// --- END REDUCE ---
-
-// --- ADJUST POINT LIGHT ---
-// Keep distance 0, maybe slightly increase intensity, ensure central position
-const pointLight = new THREE.PointLight(0xffffff, 18.0, 0); // Intensity 18.0, Distance 0
-pointLight.position.set(0, 1.5, 0); // Central position
+const pointLight = new THREE.PointLight(0xffffff, 18.0, 0);
+pointLight.position.set(0, 1.5, 0);
 scene.add(pointLight);
-// --- END ADJUST ---
 
 // --- Room Dimensions ---
 const roomWidth = 10;
@@ -36,17 +31,16 @@ const roomHeight = 6;
 const roomDepth = 15;
 
 // --- Materials ---
-// Wall material still needs to calculate lighting, even if shader makes it black often
+// Keep materials from previous step (white base for walls, green standard for frames)
 const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff, // Set base color to white - lighting will darken it. Shader does the rest.
-    roughness: 0.9,  // High roughness
+    color: 0xffffff,
+    roughness: 0.9,
     metalness: 0.1,
     side: THREE.DoubleSide
 });
-// Frame material - let's make this react to light too for consistency, but keep color
 const frameMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff00, // Neon Green base color
-    emissive: 0x003300, // Optional: Slight emission to make it pop a bit
+    color: 0x00ff00,
+    emissive: 0x003300,
     roughness: 0.8,
     metalness: 0.1,
     side: THREE.DoubleSide
@@ -54,7 +48,7 @@ const frameMaterial = new THREE.MeshStandardMaterial({
 
 // --- Geometry Creation ---
 const collidableObjects = [];
-// Floor, Ceiling, Walls, Frames code remains the same, but uses updated materials
+// Floor, Ceiling, Walls, Frames code remains the same
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
@@ -143,13 +137,13 @@ document.addEventListener('click', () => { document.body.style.cursor = 'default
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-// --- MODIFY DITHER SHADER ---
+// --- CORRECTED DITHER SHADER ---
 const CornerDitheringShader = {
     uniforms: {
         'tDiffuse': { value: null },
         'resolution': { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
         'uDitherPatternLevel': { value: 1 }, // 0=2x2, 1=4x4, 2=8x8
-        'uCornerLuminanceThreshold': { value: 0.15 } // Lower value = only very darkest areas dither
+        'uCornerLuminanceThreshold': { value: 0.12 } // Slightly lowered threshold
     },
     vertexShader: /* glsl */`
         varying vec2 vUv;
@@ -162,24 +156,18 @@ const CornerDitheringShader = {
         uniform sampler2D tDiffuse;
         uniform vec2 resolution;
         uniform int uDitherPatternLevel;
-        uniform float uCornerLuminanceThreshold; // New uniform
+        uniform float uCornerLuminanceThreshold;
         varying vec2 vUv;
 
         // Bayer matrices (keep these)
         const mat2 bayer2 = mat2(0.0, 2.0, 3.0, 1.0) / 4.0;
         const mat4 bayer4 = mat4( 0.0,  8.0,  2.0, 10.0, 12.0,  4.0, 14.0,  6.0, 3.0, 11.0,  1.0,  9.0, 15.0,  7.0, 13.0,  5.0) / 16.0;
-        // ... (keep 8x8 matrices if uDitherPatternLevel can be 2)
         const mat4 bayer8_TL = mat4( 0.0, 32.0,  8.0, 40.0, 48.0, 16.0, 56.0, 24.0, 12.0, 44.0,  4.0, 36.0, 60.0, 28.0, 52.0, 20.0); const mat4 bayer8_TR = mat4( 2.0, 34.0, 10.0, 42.0, 50.0, 18.0, 58.0, 26.0, 14.0, 46.0,  6.0, 38.0, 62.0, 30.0, 54.0, 22.0); const mat4 bayer8_BL = mat4( 3.0, 35.0, 11.0, 43.0, 51.0, 19.0, 59.0, 27.0, 15.0, 47.0,  7.0, 39.0, 63.0, 31.0, 55.0, 23.0); const mat4 bayer8_BR = mat4( 1.0, 33.0,  9.0, 41.0, 49.0, 17.0, 57.0, 25.0, 13.0, 45.0,  5.0, 37.0, 61.0, 29.0, 53.0, 21.0);
 
         float getBayerThreshold(int x, int y, int level) {
              if (level == 0) { ivec2 p = ivec2(mod(float(x), 2.0), mod(float(y), 2.0)); return bayer2[p.x][p.y]; }
              else if (level == 1) { ivec2 p = ivec2(mod(float(x), 4.0), mod(float(y), 4.0)); return bayer4[p.x][p.y]; }
-             else { // level == 2 (8x8)
-                 ivec2 p = ivec2(mod(float(x), 8.0), mod(float(y), 8.0));
-                 float value;
-                 if (p.x < 4 && p.y < 4) { value = bayer8_TL[p.x][p.y]; } else if (p.x >= 4 && p.y < 4) { value = bayer8_TR[p.x - 4][p.y]; } else if (p.x < 4 && p.y >= 4) { value = bayer8_BL[p.x][p.y - 4]; } else { value = bayer8_BR[p.x - 4][p.y - 4]; }
-                 return value / 64.0;
-             }
+             else { ivec2 p = ivec2(mod(float(x), 8.0), mod(float(y), 8.0)); float value; if (p.x < 4 && p.y < 4) { value = bayer8_TL[p.x][p.y]; } else if (p.x >= 4 && p.y < 4) { value = bayer8_TR[p.x - 4][p.y]; } else if (p.x < 4 && p.y >= 4) { value = bayer8_BL[p.x][p.y - 4]; } else { value = bayer8_BR[p.x - 4][p.y - 4]; } return value / 64.0; }
         }
 
         float luminance(vec3 color) {
@@ -191,35 +179,41 @@ const CornerDitheringShader = {
             vec4 texColor = texture2D(tDiffuse, vUv);
             float lum = luminance(texColor.rgb);
 
-            vec3 finalColor;
+            // Default to black
+            vec3 finalColor = vec3(0.0);
 
             if (lum < uCornerLuminanceThreshold) {
-                // Area is dark enough, apply black/white dithering
+                // DARK AREA (Corner) - Apply Black/White Dither
                 float ditherPatternValue = getBayerThreshold(screenCoord.x, screenCoord.y, uDitherPatternLevel);
 
                 // Map the low luminance (0 to uCornerLuminanceThreshold) to a 0-1 range
-                // This determines the 'density' of white pixels in the dither pattern
-                float mappedLum = smoothstep(0.0, uCornerLuminanceThreshold, lum); // Use smoothstep for nicer transition
+                float mappedLum = smoothstep(0.0, uCornerLuminanceThreshold, lum);
 
-                // If mapped luminance is less than the Bayer threshold, output black, otherwise white
-                finalColor = (mappedLum < ditherPatternValue) ? vec3(0.0) : vec3(1.0);
-            } else {
-                // Area is too bright, output pure black
-                finalColor = vec3(0.0);
+                // If the Bayer pattern value is LESS than the mapped luminance,
+                // make the pixel white. Otherwise, it stays the default black.
+                if (ditherPatternValue < mappedLum) {
+                     finalColor = vec3(1.0);
+                }
             }
+            // else: (lum >= uCornerLuminanceThreshold - BRIGHT AREA) -> finalColor remains black
 
-            // Handle frame color separately - dither green/black always? Or make it black too?
-            // Let's try making frames black unless they fall in the 'corner' threshold too.
-            // For a distinct frame style, you might need a separate pass or different logic.
+            // Apply the frame color directly if it's green (simple check, might need refinement)
+            // This overrides the dithering for the frames.
+            // Check if original texture color is predominantly green
+             if (texColor.g > 0.5 && texColor.r < 0.3 && texColor.b < 0.3) {
+                 // Simple green/black dither for frames based on luminance? Or just green?
+                 // Let's just make frames green for now to distinguish them.
+                 finalColor = texColor.rgb; // Use original lit green frame color
+             }
 
 
             gl_FragColor = vec4(finalColor, texColor.a);
         }
     `
 };
-const cornerDitherPass = new ShaderPass(CornerDitheringShader); // Use the new shader object
-composer.addPass(cornerDitherPass); // Add the pass
-// --- END MODIFY ---
+const cornerDitherPass = new ShaderPass(CornerDitheringShader);
+composer.addPass(cornerDitherPass);
+// --- END CORRECTION ---
 
 
 // --- Animation Loop ---
@@ -276,7 +270,6 @@ window.addEventListener('resize', () => {
     renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     composer.setSize(window.innerWidth, window.innerHeight);
     composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    // Update new dither pass resolution uniform
     if (cornerDitherPass && cornerDitherPass.uniforms.resolution) {
         cornerDitherPass.uniforms.resolution.value.set(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio);
     }
@@ -287,4 +280,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("Applied corner dithering shader and adjusted lighting for high contrast.");
+console.log("Corrected corner dithering logic for mostly black walls.");
