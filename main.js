@@ -19,15 +19,15 @@ const roomHeight = 6;
 const roomDepth = 15; // Making it deeper than wide
 
 // --- Materials ---
-// A simple black material for the room surfaces
+// UPDATED: Black material for the room surfaces
 const wallMaterial = new THREE.MeshBasicMaterial({
-    color: #000000, // Black
+    color: 0x000000, // Black
     side: THREE.DoubleSide // Render both sides (important for walls viewed from inside)
 });
 
-// A contrasting material for the frames (e.g., Dark grey)
+// UPDATED: Dark grey material for the frames
 const frameMaterial = new THREE.MeshBasicMaterial({
-    color: 0x333333, // Dark grey
+    color: 0x333333, // Dark Grey
     side: THREE.DoubleSide // Render both sides
 });
 
@@ -127,9 +127,9 @@ window.addEventListener('resize', () => {
 // --- Start Animation ---
 animate();
 
-console.log("Three.js scene initialized with room geometry!");
+console.log("Three.js scene initialized with room geometry (updated colors)!");
 // Next steps:
 // 1. Implement FPS controls (e.g., PointerLockControls)
-// 2. Add basic lighting (even if aiming for Obra Dinn style, some light helps define form initially)
+// 2. Add basic lighting (even if minimal)
 // 3. Start working on the post-processing dithering shader
 // 4. Replace frame placeholders with actual content/textures
