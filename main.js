@@ -81,74 +81,34 @@ camera.rotation.order = 'YXZ';
 camera.rotation.x = 0;
 const baseCameraY = camera.position.y;
 
-// --- Arena Controls Parameters ---
-const turnAngle = Math.PI / 12; // 15 degrees
-const gridSize = 1.0;
-const actionCooldown = 150; // ms
-let canPerformAction = true;
+// --- Continuous Controls Parameters ---
+const moveSpeed = 4.0;   // Units per second
+const turnSpeed = Math.PI / 1.5; // Radians per second (adjust for desired turn rate)
+// Removed: gridSize, turnAngle, actionCooldown, canPerformAction
 
 // --- Camera Bobbing Parameters ---
 const bobFrequency = 1.8; // Hz
 const bobAmplitude = 0.04;
-let isMoving = false;
+let isMoving = false; // Will be updated continuously in animate()
 
 // --- Keyboard Input ---
 const keysPressed = {};
-const controlKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // Define control keys
+const controlKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 
 document.addEventListener('keydown', (event) => {
-    // --- Hide Cursor on relevant key press ---
+    // Hide Cursor on relevant key press
     if (controlKeys.includes(event.code)) {
         document.body.style.cursor = 'none';
     }
-
-    if (!keysPressed[event.code]) {
-        keysPressed[event.code] = true;
-
-        if (canPerformAction) {
-            let actionTaken = false;
-
-            // Turning
-            if (event.code === 'KeyA' || event.code === 'ArrowLeft') {
-                camera.rotation.y += turnAngle;
-                actionTaken = true;
-            } else if (event.code === 'KeyD' || event.code === 'ArrowRight') {
-                camera.rotation.y -= turnAngle;
-                actionTaken = true;
-            }
-
-            // Movement
-            else if (event.code === 'KeyW' || event.code === 'ArrowUp') {
-                const forward = new THREE.Vector3(0, 0, -1);
-                forward.applyEuler(camera.rotation);
-                camera.position.add(forward.multiplyScalar(gridSize));
-                isMoving = true;
-                actionTaken = true;
-            } else if (event.code === 'KeyS' || event.code === 'ArrowDown') {
-                const backward = new THREE.Vector3(0, 0, 1);
-                backward.applyEuler(camera.rotation);
-                camera.position.add(backward.multiplyScalar(gridSize));
-                isMoving = true;
-                actionTaken = true;
-            }
-
-            if (actionTaken) {
-                canPerformAction = false;
-                setTimeout(() => {
-                    canPerformAction = true;
-                }, actionCooldown);
-            }
-        }
-    }
+    // Just record the key press state
+    keysPressed[event.code] = true;
+    // --- Movement/Turning logic moved to animate() ---
 });
 
 document.addEventListener('keyup', (event) => {
+    // Record the key release state
     keysPressed[event.code] = false;
-    if ((event.code === 'KeyW' || event.code === 'ArrowUp' || event.code === 'KeyS' || event.code === 'ArrowDown')) {
-        if (!keysPressed['KeyW'] && !keysPressed['ArrowUp'] && !keysPressed['KeyS'] && !keysPressed['ArrowDown']) {
-           isMoving = false;
-        }
-    }
+    // --- Bobbing stop logic also moved to animate() ---
 });
 
 // --- Show Cursor on Click ---
@@ -159,26 +119,59 @@ document.addEventListener('click', () => {
 
 // --- Animation Loop ---
 const clock = new THREE.Clock();
+let previousTime = 0; // Keep track for deltaTime calculation
 
 function animate() {
     requestAnimationFrame(animate); // Request next frame first
 
     const elapsedTime = clock.getElapsedTime();
+    const deltaTime = elapsedTime - previousTime; // Time since last frame
+    previousTime = elapsedTime;
 
-    // Apply Camera Bob
+    // --- Continuous Movement & Turning Logic ---
+    let currentlyMovingForwardOrBackward = false; // Track for bobbing
+
+    // Turning (A/D or Left/Right)
+    if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) {
+        camera.rotation.y += turnSpeed * deltaTime;
+    }
+    if (keysPressed['KeyD'] || keysPressed['ArrowRight']) {
+        camera.rotation.y -= turnSpeed * deltaTime;
+    }
+
+    // Movement (W/S or Up/Down)
+    const currentMoveSpeed = moveSpeed * deltaTime; // Speed adjusted for frame duration
+    if (keysPressed['KeyW'] || keysPressed['ArrowUp']) {
+        const forward = new THREE.Vector3(0, 0, -1);
+        forward.applyEuler(camera.rotation);
+        camera.position.add(forward.multiplyScalar(currentMoveSpeed));
+        currentlyMovingForwardOrBackward = true;
+    }
+    if (keysPressed['KeyS'] || keysPressed['ArrowDown']) {
+        const backward = new THREE.Vector3(0, 0, 1); // Use positive Z for backward relative to camera
+        backward.applyEuler(camera.rotation);
+        camera.position.add(backward.multiplyScalar(currentMoveSpeed));
+        currentlyMovingForwardOrBackward = true;
+    }
+
+    // Update bobbing state based on current frame's movement
+    isMoving = currentlyMovingForwardOrBackward;
+
+    // --- Apply Camera Bob ---
     if (isMoving) {
+        // Use elapsedTime for consistent bob cycle regardless of movement start/stop
         const bobOffset = Math.sin(elapsedTime * bobFrequency * 2 * Math.PI) * bobAmplitude;
         camera.position.y = baseCameraY + bobOffset;
     } else {
         // Smooth return to base height
         if (Math.abs(camera.position.y - baseCameraY) > 0.001) {
-             camera.position.y += (baseCameraY - camera.position.y) * 0.1;
+             camera.position.y += (baseCameraY - camera.position.y) * 0.1; // Simple lerp
         } else {
              camera.position.y = baseCameraY; // Snap if close
         }
     }
 
-    // Lock Pitch
+    // --- Lock Pitch ---
     camera.rotation.x = 0;
 
     // Render
@@ -194,8 +187,8 @@ window.addEventListener('resize', () => {
 });
 
 // --- Start Animation ---
-// Ensure cursor is visible initially (might depend on browser default)
 document.body.style.cursor = 'default';
+previousTime = clock.getElapsedTime(); // Initialize previousTime
 animate();
 
-console.log("Arena-style controls active. Cursor hides on move, appears on click.");
+console.log("Continuous Arena-style controls active. Hold keys to move/turn.");
