@@ -14,11 +14,24 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0x222222); // Dark gray clear color
+renderer.setClearColor(0x222222);
 
 // --- Lighting ---
-const ambientLight = new THREE.AmbientLight(0x404040);
+// Remove or comment out ambient light if we only want point light effect,
+// or keep it for subtle fill light. Let's keep it for now.
+const ambientLight = new THREE.AmbientLight(0x404040, 0.5); // Reduced intensity
 scene.add(ambientLight);
+
+// --- ADD POINT LIGHT ---
+const pointLight = new THREE.PointLight(0xffffff, 1.5, 20); // Color, Intensity, Distance
+// Position it roughly in the middle, slightly above player height
+pointLight.position.set(0, 1, 0); // x, y, z
+scene.add(pointLight);
+
+// Optional: Add a helper to visualize the point light's position
+const pointLightHelper = new THREE.PointLightHelper(pointLight, 0.5); // Light, size
+scene.add(pointLightHelper); // Comment this out for final look
+// --- END ADD POINT LIGHT ---
 
 // --- Room Dimensions ---
 const roomWidth = 10;
@@ -26,18 +39,23 @@ const roomHeight = 6;
 const roomDepth = 15;
 
 // --- Materials ---
-const wallMaterial = new THREE.MeshBasicMaterial({
-    color: 0x888888, // Mid-gray for walls/floor/ceiling
-    side: THREE.DoubleSide // Ensures walls are visible from inside
+// --- CHANGE WALL MATERIAL TO STANDARD ---
+const wallMaterial = new THREE.MeshStandardMaterial({
+    color: 0x888888,     // Base color (mid-gray)
+    roughness: 0.8,      // Make it less shiny
+    metalness: 0.2,      // Make it slightly metallic (optional)
+    side: THREE.DoubleSide
 });
-const frameMaterial = new THREE.MeshBasicMaterial({
+// --- END CHANGE ---
+
+const frameMaterial = new THREE.MeshBasicMaterial({ // Keep frames basic for now
     color: 0x00ff00, // Neon Green
     side: THREE.DoubleSide
 });
 
 // --- Geometry Creation ---
-const collidableObjects = []; // Array to hold objects for collision detection
-
+const collidableObjects = [];
+// Floor, Ceiling, Walls, Frames code remains the same, but walls will now use MeshStandardMaterial
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
@@ -45,7 +63,6 @@ floor.rotation.x = -Math.PI / 2;
 floor.position.y = -roomHeight / 2;
 scene.add(floor);
 collidableObjects.push(floor);
-
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
@@ -53,7 +70,6 @@ ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
 collidableObjects.push(ceiling);
-
 // Back Wall
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
 const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
@@ -61,7 +77,6 @@ backWall.position.z = -roomDepth / 2;
 backWall.position.y = 0;
 scene.add(backWall);
 collidableObjects.push(backWall);
-
 // Left Wall
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
@@ -70,7 +85,6 @@ leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = 0;
 scene.add(leftWall);
 collidableObjects.push(leftWall);
-
 // Right Wall
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
@@ -79,18 +93,14 @@ rightWall.position.x = roomWidth / 2;
 rightWall.position.y = 0;
 scene.add(rightWall);
 collidableObjects.push(rightWall);
-
-// --- ADD FRONT WALL ---
+// Front Wall
 const frontWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
 const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
-frontWall.position.z = roomDepth / 2; // Position at the positive z boundary
-frontWall.rotation.y = Math.PI; // Rotate to face inwards
+frontWall.position.z = roomDepth / 2;
+frontWall.rotation.y = Math.PI;
 frontWall.position.y = 0;
 scene.add(frontWall);
-collidableObjects.push(frontWall); // Add to collidables
-// --- END ADD FRONT WALL ---
-
-
+collidableObjects.push(frontWall);
 // Frame 1
 const frameWidth = 2.5; const frameHeight = 1.8; const frameDepthOffset = 0.01;
 const frame1Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
@@ -107,7 +117,6 @@ scene.add(frame2);
 
 // --- Camera Setup ---
 const playerHeight = 1.7;
-// Start slightly further from the back wall, now also away from the front wall
 camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 3);
 camera.rotation.order = 'YXZ';
 camera.rotation.x = 0;
@@ -117,16 +126,12 @@ const baseCameraY = camera.position.y;
 const playerRadius = 0.3;
 const raycaster = new THREE.Raycaster();
 
-// --- Continuous Controls Parameters ---
+// --- Controls & Input ---
 const moveSpeed = 4.0;
 const turnSpeed = Math.PI / 1.5;
-
-// --- Camera Bobbing Parameters ---
 const bobFrequency = 1.8;
 const bobAmplitude = 0.04;
 let isMoving = false;
-
-// --- Keyboard Input ---
 const keysPressed = {};
 const controlKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
 document.addEventListener('keydown', (event) => { if (controlKeys.includes(event.code)) { document.body.style.cursor = 'none'; } keysPressed[event.code] = true; });
@@ -156,57 +161,29 @@ function animate() {
     const deltaTime = elapsedTime - previousTime;
     previousTime = elapsedTime;
 
-    // --- Calculate Movement ---
+    // (Movement, Collision, Bobbing code remains the same)
     let currentlyMovingForwardOrBackward = false;
     const currentMoveSpeed = moveSpeed * deltaTime;
     const moveDirection = new THREE.Vector3();
     let applyMovement = false;
-    let collisionDetected = false; // Declare here
-
-    // Turning
+    let collisionDetected = false;
     if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) { camera.rotation.y += turnSpeed * deltaTime; }
     if (keysPressed['KeyD'] || keysPressed['ArrowRight']) { camera.rotation.y -= turnSpeed * deltaTime; }
-
-    // Forward/Backward intention
-    if (keysPressed['KeyW'] || keysPressed['ArrowUp']) {
-        moveDirection.set(0, 0, -1).applyEuler(camera.rotation);
-        currentlyMovingForwardOrBackward = true;
-        applyMovement = true;
-    }
-    if (keysPressed['KeyS'] || keysPressed['ArrowDown']) {
-        moveDirection.set(0, 0, 1).applyEuler(camera.rotation);
-        currentlyMovingForwardOrBackward = true;
-        applyMovement = true;
-    }
-
-    // --- Collision Detection ---
+    if (keysPressed['KeyW'] || keysPressed['ArrowUp']) { moveDirection.set(0, 0, -1).applyEuler(camera.rotation); currentlyMovingForwardOrBackward = true; applyMovement = true; }
+    if (keysPressed['KeyS'] || keysPressed['ArrowDown']) { moveDirection.set(0, 0, 1).applyEuler(camera.rotation); currentlyMovingForwardOrBackward = true; applyMovement = true; }
     if (applyMovement) {
         const moveVector = moveDirection.clone().multiplyScalar(currentMoveSpeed);
         const moveLength = moveVector.length();
-
-        // Ensure moveDirection is normalized before setting raycaster
-        // Note: moveDirection is already normalized from .set().applyEuler() if W/S is pressed
-        raycaster.set(camera.position, moveDirection);
-
+        raycaster.set(camera.position, moveDirection.normalize()); // Ensure normalized direction
         const intersects = raycaster.intersectObjects(collidableObjects);
-
-        if (intersects.length > 0) {
-            if (intersects[0].distance < moveLength + playerRadius) {
-                collisionDetected = true;
-                // console.log("Collision detected!");
-            }
+        if (intersects.length > 0 && intersects[0].distance < moveLength + playerRadius) {
+            collisionDetected = true;
         }
-
-        // --- Apply Movement (if no collision) ---
         if (!collisionDetected) {
             camera.position.add(moveVector);
         }
     }
-
-    // Update isMoving based on *intention* and *actual* movement
     isMoving = currentlyMovingForwardOrBackward && !collisionDetected;
-
-    // --- Apply Camera Bob ---
      if (isMoving) {
         const bobOffset = Math.sin(elapsedTime * bobFrequency * 2 * Math.PI) * bobAmplitude;
         const potentialY = baseCameraY + bobOffset;
@@ -214,14 +191,9 @@ function animate() {
         const floorLimit = -roomHeight / 2 + playerRadius;
         camera.position.y = THREE.MathUtils.clamp(potentialY, floorLimit, ceilingLimit);
     } else {
-        if (Math.abs(camera.position.y - baseCameraY) > 0.001) {
-             camera.position.y += (baseCameraY - camera.position.y) * 0.1;
-        } else {
-             camera.position.y = baseCameraY;
-        }
+        if (Math.abs(camera.position.y - baseCameraY) > 0.001) { camera.position.y += (baseCameraY - camera.position.y) * 0.1; }
+        else { camera.position.y = baseCameraY; }
     }
-
-    // --- Lock Pitch ---
     camera.rotation.x = 0;
 
     // Render using the composer
@@ -243,4 +215,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("Front wall added and included in collisions.");
+console.log("Switched wall material to MeshStandardMaterial and added PointLight.");
