@@ -14,9 +14,12 @@ const renderer = new THREE.WebGLRenderer({
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0x222222); // Keep clear color dark gray
+// Set clear color to dark gray (or match wall color if desired)
+// If walls are 0x888888, maybe set clear color to 0x888888 too? Let's try keeping it darker first.
+renderer.setClearColor(0x222222);
 
 // --- Lighting ---
+// Ambient light doesn't affect MeshBasicMaterial, but keep it for potential future materials
 const ambientLight = new THREE.AmbientLight(0x404040);
 scene.add(ambientLight);
 
@@ -26,46 +29,47 @@ const roomHeight = 6;
 const roomDepth = 15;
 
 // --- Materials ---
+// --- CHANGE WALL COLOR TO MID-GRAY ---
 const wallMaterial = new THREE.MeshBasicMaterial({
-    color: 0x222222, // Wall color set to dark gray
+    color: 0x888888, // Use mid-gray to make it very obvious
     side: THREE.DoubleSide
 });
+// --- END CHANGE ---
 const frameMaterial = new THREE.MeshBasicMaterial({
     color: 0x00ff00, // Neon Green
     side: THREE.DoubleSide
 });
 
 // --- Geometry Creation ---
-// Floor, Ceiling, Walls, Frames use wallMaterial or frameMaterial
-// (Code omitted for brevity - no changes here)
+// (Floor, Ceiling, Walls, Frames code remains the same)
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const floor = new THREE.Mesh(floorGeometry, wallMaterial); // Uses updated wallMaterial
+const floor = new THREE.Mesh(floorGeometry, wallMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -roomHeight / 2;
 scene.add(floor);
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial); // Uses updated wallMaterial
+const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
 // Back Wall
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
-const backWall = new THREE.Mesh(backWallGeometry, wallMaterial); // Uses updated wallMaterial
+const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
 backWall.position.z = -roomDepth / 2;
 backWall.position.y = 0;
 scene.add(backWall);
 // Left Wall
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
-const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial); // Uses updated wallMaterial
+const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
 leftWall.rotation.y = Math.PI / 2;
 leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = 0;
 scene.add(leftWall);
 // Right Wall
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
-const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial); // Uses updated wallMaterial
+const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
 rightWall.rotation.y = -Math.PI / 2;
 rightWall.position.x = roomWidth / 2;
 rightWall.position.y = 0;
@@ -85,16 +89,13 @@ scene.add(frame2);
 
 
 // --- Camera Setup ---
-// (Code omitted for brevity - no changes here)
 const playerHeight = 1.7;
 camera.position.set(0, -roomHeight / 2 + playerHeight, roomDepth / 2 - 2);
 camera.rotation.order = 'YXZ';
 camera.rotation.x = 0;
 const baseCameraY = camera.position.y;
 
-
 // --- Controls & Input ---
-// (Code omitted for brevity - no changes here)
 const moveSpeed = 4.0;
 const turnSpeed = Math.PI / 1.5;
 const bobFrequency = 1.8;
@@ -111,36 +112,46 @@ document.addEventListener('click', () => { document.body.style.cursor = 'default
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
 
-// 2. Custom Dithering Shader (WITH TEMPORARY DEBUG MAIN FUNCTION)
+// 2. Custom Dithering Shader (Original Logic Restored)
 const DitheringShader = {
-    uniforms: { // Uniforms are still needed even if not used in debug main
+    uniforms: {
         'tDiffuse': { value: null },
         'resolution': { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
-        'uDitherPatternLevel': { value: 1 }
+        'uDitherPatternLevel': { value: 1 } // 0: 2x2, 1: 4x4, 2: 8x8
     },
     vertexShader: /* glsl */` varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); } `,
     fragmentShader: /* glsl */`
-        uniform sampler2D tDiffuse; // Input texture
-        uniform vec2 resolution; // Unused in debug
-        uniform int uDitherPatternLevel; // Unused in debug
-        varying vec2 vUv;
+        uniform sampler2D tDiffuse; uniform vec2 resolution; uniform int uDitherPatternLevel; varying vec2 vUv;
+        const mat2 bayer2 = mat2(0.0, 2.0, 3.0, 1.0) / 4.0;
+        const mat4 bayer4 = mat4( 0.0,  8.0,  2.0, 10.0, 12.0,  4.0, 14.0,  6.0, 3.0, 11.0,  1.0,  9.0, 15.0,  7.0, 13.0,  5.0) / 16.0;
+        const mat4 bayer8_TL = mat4( 0.0, 32.0,  8.0, 40.0, 48.0, 16.0, 56.0, 24.0, 12.0, 44.0,  4.0, 36.0, 60.0, 28.0, 52.0, 20.0);
+        const mat4 bayer8_TR = mat4( 2.0, 34.0, 10.0, 42.0, 50.0, 18.0, 58.0, 26.0, 14.0, 46.0,  6.0, 38.0, 62.0, 30.0, 54.0, 22.0);
+        const mat4 bayer8_BL = mat4( 3.0, 35.0, 11.0, 43.0, 51.0, 19.0, 59.0, 27.0, 15.0, 47.0,  7.0, 39.0, 63.0, 31.0, 55.0, 23.0);
+        const mat4 bayer8_BR = mat4( 1.0, 33.0,  9.0, 41.0, 49.0, 17.0, 57.0, 25.0, 13.0, 45.0,  5.0, 37.0, 61.0, 29.0, 53.0, 21.0);
+        float getBayerThreshold(int x, int y, int level) {
+            if (level == 0) { ivec2 p = ivec2(mod(float(x), 2.0), mod(float(y), 2.0)); return bayer2[p.x][p.y]; }
+            else if (level == 1) { ivec2 p = ivec2(mod(float(x), 4.0), mod(float(y), 4.0)); return bayer4[p.x][p.y]; }
+            else { ivec2 p = ivec2(mod(float(x), 8.0), mod(float(y), 8.0)); float value;
+                if (p.x < 4 && p.y < 4) { value = bayer8_TL[p.x][p.y]; } else if (p.x >= 4 && p.y < 4) { value = bayer8_TR[p.x - 4][p.y]; }
+                else if (p.x < 4 && p.y >= 4) { value = bayer8_BL[p.x][p.y - 4]; } else { value = bayer8_BR[p.x - 4][p.y - 4]; }
+                return value / 64.0; } }
+        float luminance(vec3 color) { return dot(color, vec3(0.299, 0.587, 0.114)); }
 
-        // Bayer matrices etc are still here but not used by main()
-
-        // --- TEMPORARY DEBUG ---
-        // Output the raw color received from the RenderPass directly
+        // --- ORIGINAL DITHERING LOGIC ---
         void main() {
-            vec4 texColor = texture2D(tDiffuse, vUv);
-            gl_FragColor = texColor; // Just output the input color
+            ivec2 screenCoord = ivec2(gl_FragCoord.xy); float threshold = getBayerThreshold(screenCoord.x, screenCoord.y, uDitherPatternLevel);
+            vec4 texColor = texture2D(tDiffuse, vUv); float lum = luminance(texColor.rgb);
+            // Dither between black and the original texture color
+            vec3 ditheredColor = (lum < threshold) ? vec3(0.0) : texColor.rgb;
+            gl_FragColor = vec4(ditheredColor, texColor.a);
         }
-        // --- END TEMPORARY DEBUG ---
+        // --- END ORIGINAL DITHERING LOGIC ---
     `
 };
 const ditherPass = new ShaderPass(DitheringShader);
 composer.addPass(ditherPass);
 
 // --- Animation Loop ---
-// (Code omitted for brevity - no changes here)
 const clock = new THREE.Clock();
 let previousTime = 0;
 function animate() {
@@ -159,9 +170,7 @@ function animate() {
     composer.render(deltaTime);
 }
 
-
 // --- Handle Window Resize ---
-// (Code omitted for brevity - no changes here)
 window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -176,4 +185,4 @@ document.body.style.cursor = 'default';
 previousTime = clock.getElapsedTime();
 animate();
 
-console.log("DEBUG: Dither shader modified to output raw RenderPass color.");
+console.log("Restored dither shader. Wall material set to mid-gray (0x888888).");
