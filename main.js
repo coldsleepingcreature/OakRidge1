@@ -1,54 +1,115 @@
 import * as THREE from 'three';
-// OrbitControls are useful for debugging, PointerLockControls for FPS
-// import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// Later, you might need controls like PointerLockControls:
+// import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js';
 
 // --- Basic Setup ---
-
-// Scene
 const scene = new THREE.Scene();
-
-// Camera
-const camera = new THREE.PerspectiveCamera(
-    75, // Field of View (you can adjust this later)
-    window.innerWidth / window.innerHeight, // Aspect Ratio
-    0.1, // Near clipping plane
-    1000 // Far clipping plane
-);
-camera.position.z = 5; // Move camera back a bit
-
-// Renderer
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const canvas = document.getElementById('webgl-canvas');
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
-    antialias: true // You might turn this off later depending on the dither shader
+    antialias: true // Keep true for now, might disable later for specific shader effects
 });
 renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Improve sharpness on high DPI screens
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-// --- Example Object ---
+// --- Room Dimensions ---
+const roomWidth = 10;
+const roomHeight = 6;
+const roomDepth = 15; // Making it deeper than wide
 
-// Geometry
-const geometry = new THREE.BoxGeometry(1, 1, 1); // A simple cube
+// --- Materials ---
+// A simple dark grey material for the room surfaces
+const wallMaterial = new THREE.MeshBasicMaterial({
+    color: 0x333333, // Dark grey
+    side: THREE.DoubleSide // Render both sides (important for walls viewed from inside)
+});
 
-// Material (using basic material for now)
-const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 }); // Bright green
+// A contrasting material for the frames (e.g., white)
+const frameMaterial = new THREE.MeshBasicMaterial({
+    color: 0xffffff, // White
+    side: THREE.DoubleSide // Render both sides
+});
 
-// Mesh (combine geometry and material)
-const cube = new THREE.Mesh(geometry, material);
-scene.add(cube);
+// --- Geometry Creation ---
+
+// Floor
+const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
+const floor = new THREE.Mesh(floorGeometry, wallMaterial);
+floor.rotation.x = -Math.PI / 2; // Rotate plane to be horizontal
+floor.position.y = -roomHeight / 2; // Position at the bottom
+scene.add(floor);
+
+// Ceiling
+const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
+const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
+ceiling.rotation.x = Math.PI / 2; // Rotate plane to be horizontal and face down
+ceiling.position.y = roomHeight / 2; // Position at the top
+scene.add(ceiling);
+
+// Walls
+// Back Wall (negative Z)
+const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
+const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
+backWall.position.z = -roomDepth / 2; // Position at the back
+backWall.position.y = 0; // Center vertically
+scene.add(backWall);
+
+// Left Wall (negative X)
+const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight); // Note: Depth is width here
+const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
+leftWall.rotation.y = Math.PI / 2; // Rotate to face inwards
+leftWall.position.x = -roomWidth / 2; // Position on the left
+leftWall.position.y = 0; // Center vertically
+scene.add(leftWall);
+
+// Right Wall (positive X)
+const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight); // Note: Depth is width here
+const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
+rightWall.rotation.y = -Math.PI / 2; // Rotate to face inwards
+rightWall.position.x = roomWidth / 2; // Position on the right
+rightWall.position.y = 0; // Center vertically
+scene.add(rightWall);
+
+// NOTE: We are omitting the Front Wall (positive Z) so we can see inside easily.
+
+// --- Frames (Placeholders) ---
+const frameWidth = 2.5;
+const frameHeight = 1.8;
+const frameDepthOffset = 0.01; // Tiny offset to prevent z-fighting with wall
+
+// Frame 1 (on Back Wall)
+const frame1Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
+const frame1 = new THREE.Mesh(frame1Geometry, frameMaterial);
+frame1.position.set(
+    -roomWidth / 4,      // Position horizontally on the back wall
+    0,                   // Position vertically (centered for now)
+    -roomDepth / 2 + frameDepthOffset // Slightly in front of the back wall
+);
+scene.add(frame1);
+
+// Frame 2 (on Left Wall)
+const frame2Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight); // Can reuse geometry or make new if different size
+const frame2 = new THREE.Mesh(frame2Geometry, frameMaterial);
+frame2.rotation.y = Math.PI / 2; // Match left wall's rotation
+frame2.position.set(
+    -roomWidth / 2 + frameDepthOffset, // Slightly in front of the left wall
+    0.5,                 // Position vertically (a bit higher)
+    -roomDepth / 4       // Position along the depth of the left wall
+);
+scene.add(frame2);
+
+// --- Camera Position ---
+// Place the camera inside the room, near the front
+camera.position.set(0, 0, roomDepth / 2 - 2); // Start slightly inside the front opening
+camera.lookAt(0, 0, 0); // Look towards the center/back
 
 // --- Animation Loop ---
-
-const clock = new THREE.Clock();
-
+// No objects are animated by default now, but the loop is needed for rendering
 function animate() {
-    const elapsedTime = clock.getElapsedTime();
+    // Update controls here later (e.g., controls.update())
 
-    // Example animation: Rotate the cube
-    cube.rotation.x = elapsedTime * 0.5;
-    cube.rotation.y = elapsedTime * 0.5;
-
-    // Render the scene from the perspective of the camera
+    // Render the scene
     renderer.render(scene, camera);
 
     // Request the next frame
@@ -56,13 +117,9 @@ function animate() {
 }
 
 // --- Handle Window Resize ---
-
 window.addEventListener('resize', () => {
-    // Update camera aspect ratio
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
-
-    // Update renderer size
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 });
@@ -70,10 +127,9 @@ window.addEventListener('resize', () => {
 // --- Start Animation ---
 animate();
 
-console.log("Three.js scene initialized!");
+console.log("Three.js scene initialized with room geometry!");
 // Next steps:
-// 1. Add room geometry (walls, floor, ceiling)
-// 2. Implement FPS controls (PointerLockControls)
-// 3. Add lighting (even if minimal)
-// 4. Implement the dithering post-processing shader
-// 5. Add frames and interactive content
+// 1. Implement FPS controls (e.g., PointerLockControls)
+// 2. Add basic lighting (even if aiming for Obra Dinn style, some light helps define form initially)
+// 3. Start working on the post-processing dithering shader
+// 4. Replace frame placeholders with actual content/textures
