@@ -27,28 +27,25 @@ const frameMaterial = new THREE.MeshBasicMaterial({
 });
 
 // --- Geometry Creation ---
+// (Floor, Ceiling, Walls, Frames code remains the same)
 // Floor
 const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
 const floor = new THREE.Mesh(floorGeometry, wallMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -roomHeight / 2;
 scene.add(floor);
-
 // Ceiling
 const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-// Ensure this line is correct:
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial); // Using THREE.Mesh
+const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
 ceiling.rotation.x = Math.PI / 2;
 ceiling.position.y = roomHeight / 2;
 scene.add(ceiling);
-
 // Back Wall
 const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
 const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
 backWall.position.z = -roomDepth / 2;
 backWall.position.y = 0;
 scene.add(backWall);
-
 // Left Wall
 const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
@@ -56,7 +53,6 @@ leftWall.rotation.y = Math.PI / 2;
 leftWall.position.x = -roomWidth / 2;
 leftWall.position.y = 0;
 scene.add(leftWall);
-
 // Right Wall
 const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
 const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
@@ -64,14 +60,12 @@ rightWall.rotation.y = -Math.PI / 2;
 rightWall.position.x = roomWidth / 2;
 rightWall.position.y = 0;
 scene.add(rightWall);
-
 // Frame 1
 const frameWidth = 2.5; const frameHeight = 1.8; const frameDepthOffset = 0.01;
 const frame1Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
 const frame1 = new THREE.Mesh(frame1Geometry, frameMaterial);
 frame1.position.set(-roomWidth / 4, 0, -roomDepth / 2 + frameDepthOffset);
 scene.add(frame1);
-
 // Frame 2
 const frame2Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
 const frame2 = new THREE.Mesh(frame2Geometry, frameMaterial);
@@ -100,8 +94,14 @@ let isMoving = false;
 
 // --- Keyboard Input ---
 const keysPressed = {};
+const controlKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']; // Define control keys
 
 document.addEventListener('keydown', (event) => {
+    // --- Hide Cursor on relevant key press ---
+    if (controlKeys.includes(event.code)) {
+        document.body.style.cursor = 'none';
+    }
+
     if (!keysPressed[event.code]) {
         keysPressed[event.code] = true;
 
@@ -151,6 +151,11 @@ document.addEventListener('keyup', (event) => {
     }
 });
 
+// --- Show Cursor on Click ---
+document.addEventListener('click', () => {
+    document.body.style.cursor = 'default';
+});
+
 
 // --- Animation Loop ---
 const clock = new THREE.Clock();
@@ -189,6 +194,8 @@ window.addEventListener('resize', () => {
 });
 
 // --- Start Animation ---
+// Ensure cursor is visible initially (might depend on browser default)
+document.body.style.cursor = 'default';
 animate();
 
-console.log("Arena-style controls initialized. Use WASD/Arrows. Verify T.Mesh error is gone.");
+console.log("Arena-style controls active. Cursor hides on move, appears on click.");
