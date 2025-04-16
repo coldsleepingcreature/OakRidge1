@@ -91,6 +91,28 @@ window.addEventListener('DOMContentLoaded', () => {
     );
     room.position.y = 2.5; // Adjust position as needed
     scene.add(room); // Adding room/wallmesh to the scene
+    
+    // (Keep wallMaterial and floorMaterial definitions above)
+
+// --- Create an array of materials for the box faces ---
+const roomMaterials = [
+    wallMaterial, // Right face (+x)
+    wallMaterial, // Left face (-x)
+    wallMaterial, // Top face (+y)
+    floorMaterial, // Bottom face (-y) <<<--- Assign floor material here
+    wallMaterial, // Front face (+z)
+    wallMaterial  // Back face (-z)
+];
+// -------------------------------------------------------
+
+// Walls (Example using a simple box - replace with your actual room geometry setup)
+// Assuming you have walls, apply the wallMaterial
+const room = new THREE.Mesh(
+    new THREE.BoxGeometry(10, 5, 10), // Example size
+    roomMaterials // <<<--- Use the material array here instead of just wallMaterial
+);
+room.position.y = 2.5; // Adjust position as needed
+scene.add(room);
 
     // Add other elements (doors, windows, roof) applying appropriate materials
 
