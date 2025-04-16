@@ -80,6 +80,7 @@ window.addEventListener('DOMContentLoaded', () => {
         floorMaterial // Apply new floor material
     );
     plane.rotation.x = -Math.PI * 0.5;
+    plane.position.y = -0.001; // <<<--- ADD THIS LINE: Move floor down slightly
     scene.add(plane);
 
     // Walls (Example using a simple box - replace with your actual room geometry setup)
