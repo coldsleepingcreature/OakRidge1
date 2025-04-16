@@ -83,17 +83,6 @@ window.addEventListener('DOMContentLoaded', () => {
     plane.position.y = -0.001; // <<<--- ADD THIS LINE: Move floor down slightly
     scene.add(plane);
 
-    // Walls (Example using a simple box - replace with your actual room geometry setup)
-    // Assuming you have walls, apply the wallMaterial
-    const room = new THREE.Mesh(
-        new THREE.BoxGeometry(10, 5, 10), // Example size
-        wallMaterial // Apply new wall material
-    );
-    room.position.y = 2.5; // Adjust position as needed
-    scene.add(room); // Adding room/wallmesh to the scene
-    
-    // (Keep wallMaterial and floorMaterial definitions above)
-
 // --- Create an array of materials for the box faces ---
 const roomMaterials = [
     wallMaterial, // Right face (+x)
