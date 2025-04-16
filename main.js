@@ -47,7 +47,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- !!! REPLACE THESE PLACEHOLDER PATHS with your actual low-res texture files !!! ---
-    const wallTexture = loadTexture('./Textures/stonewall1.');   // <<-- YOUR STONE WALL TEXTURE
+    const wallTexture = loadTexture('./Textures/stonewall1.png');   // <<-- YOUR STONE WALL TEXTURE
     const floorTexture = loadTexture('./Textures/stonefloor2.png');  // <<-- YOUR WOOD/STONE FLOOR TEXTURE
     // Load other textures needed using loadTexture(...)
     // const doorTexture = loadTexture('./textures/retro_wood_door.png');
