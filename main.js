@@ -60,7 +60,10 @@ window.addEventListener('DOMContentLoaded', () => {
      */
     // Use MeshStandardMaterial or MeshLambertMaterial for interaction with light
     // MeshBasicMaterial ignores light completely
-    const wallMaterial = new THREE.MeshStandardMaterial({ map: wallTexture });
+    const wallMaterial = new THREE.MeshStandardMaterial({
+    map: wallTexture,
+    side: THREE.DoubleSide // <<<--- ADD THIS LINE
+});
     const floorMaterial = new THREE.MeshStandardMaterial({ map: floorTexture });
     // const roofMaterial = new THREE.MeshStandardMaterial({ map: roofTexture }); // If needed
     // const doorMaterial = new THREE.MeshStandardMaterial({ map: doorTexture }); // If needed
