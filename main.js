@@ -42,8 +42,8 @@ function loadTexture(path) {
 }
 
 // --- IMPORTANT: Replace these paths with your actual low-res texture files ---
-const wallTexture = loadTexture('./textures/lowres_stone_wall.png'); // << REPLACE THIS
-const floorTexture = loadTexture('./textures/lowres_wood_floor.png'); // << REPLACE THIS
+const wallTexture = loadTexture('./Textures/stonewall1.png'); // REPLACED WITH FILE PATH
+const floorTexture = loadTexture('./Textures/stonefloor2.png'); // REPLACED WITH FILE PATH
 // --------------------------------------------------------------------------
 
 /**
