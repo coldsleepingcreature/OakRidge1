@@ -1,150 +1,158 @@
 import * as THREE from 'three';
-// Import post-processing modules
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 
-// --- Basic Setup ---
+/**
+ * Base Setup
+ */
+// Canvas
+const canvas = document.querySelector('canvas.webgl');
+
+// Scene
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-const canvas = document.getElementById('webgl-canvas');
+// Set background color to match fog
+scene.background = new THREE.Color(0x201808);
+
+// Fog - Adds atmospheric depth and retro feel
+// Fog( color, near_start_distance, far_end_distance )
+scene.fog = new THREE.Fog(0x201808, 5, 30); // Dark brown fog
+
+/**
+ * Textures
+ */
+const textureLoader = new THREE.TextureLoader();
+
+// Helper function to load textures and apply retro filtering
+function loadTexture(path) {
+    const texture = textureLoader.load(path);
+    // --- CRITICAL FOR PIXELATED LOOK ---
+    // Magnification Filter (when texture is larger on screen than original size)
+    texture.magFilter = THREE.NearestFilter;
+    // Minification Filter (when texture is smaller on screen than original size)
+    // NearestMipmapNearestFilter is often a good balance for retro look + performance
+    texture.minFilter = THREE.NearestMipmapNearestFilter;
+    // --- Optional: Texture Wrapping (if textures should repeat) ---
+    // texture.wrapS = THREE.RepeatWrapping;
+    // texture.wrapT = THREE.RepeatWrapping;
+    // texture.repeat.set(4, 4); // Example: repeat texture 4 times
+    // ------------------------------------
+    return texture;
+}
+
+// --- IMPORTANT: Replace these paths with your actual low-res texture files ---
+const wallTexture = loadTexture('./textures/lowres_stone_wall.png'); // << REPLACE THIS
+const floorTexture = loadTexture('./textures/lowres_wood_floor.png'); // << REPLACE THIS
+// --------------------------------------------------------------------------
+
+/**
+ * Materials using the loaded textures
+ */
+const wallMaterial = new THREE.MeshStandardMaterial({
+    map: wallTexture,
+    side: THREE.BackSide // Render texture on the inside of the box
+});
+
+const floorMaterial = new THREE.MeshStandardMaterial({
+    map: floorTexture
+});
+
+
+/**
+ * Objects
+ */
+// Room (using BoxGeometry - Walls)
+// Adjust size as needed
+const roomGeometry = new THREE.BoxGeometry(10, 5, 10); // width, height, depth
+const room = new THREE.Mesh(roomGeometry, wallMaterial);
+scene.add(room);
+
+// Floor Plane
+const planeGeometry = new THREE.PlaneGeometry(10, 10); // width, depth
+const plane = new THREE.Mesh(planeGeometry, floorMaterial);
+plane.rotation.x = -Math.PI * 0.5; // Rotate plane to be horizontal
+plane.position.y = -2.5; // Position it at the bottom of the room box
+scene.add(plane);
+
+
+/**
+ * Lights
+ */
+// Ambient Light - Provides base illumination, tinted for mood
+const ambientLight = new THREE.AmbientLight(0x403010, 0.6); // Dim, brownish light (Hex color, Intensity)
+scene.add(ambientLight);
+
+// Directional Light - Simulates a light source like the sun, provides shadows
+// Made dimmer and slightly colored to fit the retro mood
+const directionalLight = new THREE.DirectionalLight(0xffdDB0, 0.3); // Slightly yellow, dim light
+directionalLight.position.set(5, 10, 7.5); // Position the light source
+// --- Enable Shadows (Optional but adds depth) ---
+// directionalLight.castShadow = true;
+// // Configure shadow map resolution (lower might fit retro style)
+// directionalLight.shadow.mapSize.width = 512;
+// directionalLight.shadow.mapSize.height = 512;
+// directionalLight.shadow.camera.near = 0.5;
+// directionalLight.shadow.camera.far = 50;
+// ----------------------------------------------
+scene.add(directionalLight);
+
+
+/**
+ * Sizes
+ */
+const sizes = {
+    width: window.innerWidth,
+    height: window.innerHeight
+};
+
+/**
+ * Camera
+ */
+const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+camera.position.z = 5; // Start inside the room
+camera.position.y = 0; // Adjust starting height if needed
+scene.add(camera);
+
+/**
+ * Controls
+ */
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true; // Smooth camera movement
+// Optional: Limit zoom/pan to stay inside the room
+// controls.maxDistance = 4.5;
+// controls.minDistance = 0.5;
+// controls.enablePan = false; // Disable panning if desired
+
+/**
+ * Renderer
+ */
 const renderer = new THREE.WebGLRenderer({
     canvas: canvas,
-    antialias: true
+    antialias: false // Turn OFF antialiasing for a sharper, more retro pixel look
 });
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-renderer.setClearColor(0x000000); // Black background
-renderer.outputColorSpace = THREE.SRGBColorSpace;
-
-// --- Lighting ---
-// Keep lighting from previous step (low ambient, strong point)
-const ambientLight = new THREE.AmbientLight(0x404040, 0.1);
-scene.add(ambientLight);
-const pointLight = new THREE.PointLight(0xffffff, 18.0, 0);
-pointLight.position.set(0, 1.5, 0);
-scene.add(pointLight);
-
-// --- Room Dimensions ---
-const roomWidth = 10;
-const roomHeight = 6;
-const roomDepth = 15;
-
-// --- Materials ---
-// Keep materials from previous step (white base for walls, green standard for frames)
-const wallMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.9,
-    metalness: 0.1,
-    side: THREE.DoubleSide
-});
-const frameMaterial = new THREE.MeshStandardMaterial({
-    color: 0x00ff00,
-    emissive: 0x003300,
-    roughness: 0.8,
-    metalness: 0.1,
-    side: THREE.DoubleSide
-});
-
-// --- Geometry Creation ---
-const collidableObjects = [];
-// Floor, Ceiling, Walls, Frames code remains the same
-// Floor
-const floorGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const floor = new THREE.Mesh(floorGeometry, wallMaterial);
-floor.rotation.x = -Math.PI / 2;
-floor.position.y = -roomHeight / 2;
-scene.add(floor);
-collidableObjects.push(floor);
-// Ceiling
-const ceilingGeometry = new THREE.PlaneGeometry(roomWidth, roomDepth);
-const ceiling = new THREE.Mesh(ceilingGeometry, wallMaterial);
-ceiling.rotation.x = Math.PI / 2;
-ceiling.position.y = roomHeight / 2;
-scene.add(ceiling);
-collidableObjects.push(ceiling);
-// Back Wall
-const backWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
-const backWall = new THREE.Mesh(backWallGeometry, wallMaterial);
-backWall.position.z = -roomDepth / 2;
-backWall.position.y = 0;
-scene.add(backWall);
-collidableObjects.push(backWall);
-// Left Wall
-const leftWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
-const leftWall = new THREE.Mesh(leftWallGeometry, wallMaterial);
-leftWall.rotation.y = Math.PI / 2;
-leftWall.position.x = -roomWidth / 2;
-leftWall.position.y = 0;
-scene.add(leftWall);
-collidableObjects.push(leftWall);
-// Right Wall
-const rightWallGeometry = new THREE.PlaneGeometry(roomDepth, roomHeight);
-const rightWall = new THREE.Mesh(rightWallGeometry, wallMaterial);
-rightWall.rotation.y = -Math.PI / 2;
-rightWall.position.x = roomWidth / 2;
-rightWall.position.y = 0;
-scene.add(rightWall);
-collidableObjects.push(rightWall);
-// Front Wall
-const frontWallGeometry = new THREE.PlaneGeometry(roomWidth, roomHeight);
-const frontWall = new THREE.Mesh(frontWallGeometry, wallMaterial);
-frontWall.position.z = roomDepth / 2;
-frontWall.rotation.y = Math.PI;
-frontWall.position.y = 0;
-scene.add(frontWall);
-collidableObjects.push(frontWall);
-// Frame 1
-const frameWidth = 2.5; const frameHeight = 1.8; const frameDepthOffset = 0.01;
-const frame1Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
-const frame1 = new THREE.Mesh(frame1Geometry, frameMaterial);
-frame1.position.set(-roomWidth / 4, 0, -roomDepth / 2 + frameDepthOffset);
-scene.add(frame1);
-// Frame 2
-const frame2Geometry = new THREE.PlaneGeometry(frameWidth, frameHeight);
-const frame2 = new THREE.Mesh(frame2Geometry, frameMaterial);
-frame2.rotation.y = Math.PI / 2;
-frame2.position.set(-roomWidth / 2 + frameDepthOffset, 0.5, -roomDepth / 4);
-scene.add(frame2);
+renderer.setSize(sizes.width, sizes.height);
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Limit pixel ratio for performance
+// --- Enable Shadows in Renderer (if using light shadows) ---
+// renderer.shadowMap.enabled = true;
+// renderer.shadowMap.type = THREE.PCFSoftShadowMap; // Or other shadow types
+// ---------------------------------------------------------
 
 
-// --- Camera Setup ---
-const playerHeight = 1.7;
-const initialCameraZ = roomDepth / 2 - 3;
-camera.position.set(0, -roomHeight / 2 + playerHeight, initialCameraZ);
-camera.rotation.order = 'YXZ';
-camera.rotation.x = 0;
-const baseCameraY = camera.position.y;
-
-// --- Collision Parameters ---
-const playerRadius = 0.3;
-const raycaster = new THREE.Raycaster();
-
-// --- Controls & Input ---
-const moveSpeed = 4.0;
-const turnSpeed = Math.PI / 1.5;
-const bobFrequency = 1.8;
-const bobAmplitude = 0.04;
-let isMoving = false;
-const keysPressed = {};
-const controlKeys = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'];
-document.addEventListener('keydown', (event) => { if (controlKeys.includes(event.code)) { document.body.style.cursor = 'none'; } keysPressed[event.code] = true; });
-document.addEventListener('keyup', (event) => { keysPressed[event.code] = false; });
-document.addEventListener('click', () => { document.body.style.cursor = 'default'; });
-
-
-// --- Post Processing ---
+/**
+ * Post Processing - Effect Composer for Dithering
+ */
 const composer = new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene, camera));
+composer.addPass(new RenderPass(scene, camera)); // Render the scene first
 
-// --- CORRECTED DITHER SHADER ---
-const CornerDitheringShader = {
+// --- Dithering Shader Definition ---
+const DitherShader = {
     uniforms: {
-        'tDiffuse': { value: null },
-        'resolution': { value: new THREE.Vector2(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio) },
-        'uDitherPatternLevel': { value: 1 }, // 0=2x2, 1=4x4, 2=8x8
-        'uCornerLuminanceThreshold': { value: 0.12 } // Slightly lowered threshold
+        'tDiffuse': { value: null }, // Input texture from the RenderPass
+        'uResolution': { value: new THREE.Vector2(sizes.width * renderer.getPixelRatio(), sizes.height * renderer.getPixelRatio()) }, // Screen resolution for pixel calculation
+        // Add more uniforms if needed (e.g., dither pattern scale, color palette info)
     },
+    // Vertex shader usually stays simple for post-processing
     vertexShader: /* glsl */`
         varying vec2 vUv;
         void main() {
@@ -152,132 +160,124 @@ const CornerDitheringShader = {
             gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
         }
     `,
+    // Fragment shader applies the dithering effect
     fragmentShader: /* glsl */`
-        uniform sampler2D tDiffuse;
-        uniform vec2 resolution;
-        uniform int uDitherPatternLevel;
-        uniform float uCornerLuminanceThreshold;
-        varying vec2 vUv;
+        uniform sampler2D tDiffuse; // Rendered scene texture
+        uniform vec2 uResolution;   // Screen resolution
+        varying vec2 vUv;           // UV coordinates from vertex shader
 
-        // Bayer matrices (keep these)
-        const mat2 bayer2 = mat2(0.0, 2.0, 3.0, 1.0) / 4.0;
-        const mat4 bayer4 = mat4( 0.0,  8.0,  2.0, 10.0, 12.0,  4.0, 14.0,  6.0, 3.0, 11.0,  1.0,  9.0, 15.0,  7.0, 13.0,  5.0) / 16.0;
-        const mat4 bayer8_TL = mat4( 0.0, 32.0,  8.0, 40.0, 48.0, 16.0, 56.0, 24.0, 12.0, 44.0,  4.0, 36.0, 60.0, 28.0, 52.0, 20.0); const mat4 bayer8_TR = mat4( 2.0, 34.0, 10.0, 42.0, 50.0, 18.0, 58.0, 26.0, 14.0, 46.0,  6.0, 38.0, 62.0, 30.0, 54.0, 22.0); const mat4 bayer8_BL = mat4( 3.0, 35.0, 11.0, 43.0, 51.0, 19.0, 59.0, 27.0, 15.0, 47.0,  7.0, 39.0, 63.0, 31.0, 55.0, 23.0); const mat4 bayer8_BR = mat4( 1.0, 33.0,  9.0, 41.0, 49.0, 17.0, 57.0, 25.0, 13.0, 45.0,  5.0, 37.0, 61.0, 29.0, 53.0, 21.0);
-
-        float getBayerThreshold(int x, int y, int level) {
-             if (level == 0) { ivec2 p = ivec2(mod(float(x), 2.0), mod(float(y), 2.0)); return bayer2[p.x][p.y]; }
-             else if (level == 1) { ivec2 p = ivec2(mod(float(x), 4.0), mod(float(y), 4.0)); return bayer4[p.x][p.y]; }
-             else { ivec2 p = ivec2(mod(float(x), 8.0), mod(float(y), 8.0)); float value; if (p.x < 4 && p.y < 4) { value = bayer8_TL[p.x][p.y]; } else if (p.x >= 4 && p.y < 4) { value = bayer8_TR[p.x - 4][p.y]; } else if (p.x < 4 && p.y >= 4) { value = bayer8_BL[p.x][p.y - 4]; } else { value = bayer8_BR[p.x - 4][p.y - 4]; } return value / 64.0; }
-        }
-
-        float luminance(vec3 color) {
-            return dot(color, vec3(0.299, 0.587, 0.114));
+        // Function to get Bayer matrix value (4x4) for dithering threshold
+        // Returns a value between ~0 and 1 based on screen pixel coordinate
+        float bayer4(vec2 coord) {
+            // 4x4 Bayer matrix pattern
+            const mat4 B = mat4(
+                 0.0,  8.0,  2.0, 10.0,
+                12.0,  4.0, 14.0,  6.0,
+                 3.0, 11.0,  1.0,  9.0,
+                15.0,  7.0, 13.0,  5.0
+            );
+            // Get integer coordinates modulo 4
+            ivec2 iCoord = ivec2(mod(coord, 4.0));
+            // Look up value in the matrix and normalize (dividing by 16, plus small offset)
+            return (B[iCoord.x][iCoord.y] + 1.0) / 17.0;
         }
 
         void main() {
-            ivec2 screenCoord = ivec2(gl_FragCoord.xy);
-            vec4 texColor = texture2D(tDiffuse, vUv);
-            float lum = luminance(texColor.rgb);
+            // Get the original color of the pixel from the rendered scene
+            vec4 originalColor = texture2D(tDiffuse, vUv);
 
-            // Default to black
-            vec3 finalColor = vec3(0.0);
+            // Calculate luminance (brightness) of the pixel - standard conversion
+            float luminance = dot(originalColor.rgb, vec3(0.299, 0.587, 0.114));
 
-            if (lum < uCornerLuminanceThreshold) {
-                // DARK AREA (Corner) - Apply Black/White Dither
-                float ditherPatternValue = getBayerThreshold(screenCoord.x, screenCoord.y, uDitherPatternLevel);
+            // Get the dithering threshold for this specific pixel coordinate
+            // gl_FragCoord.xy gives the pixel's screen coordinate
+            float ditherThreshold = bayer4(gl_FragCoord.xy);
 
-                // Map the low luminance (0 to uCornerLuminanceThreshold) to a 0-1 range
-                float mappedLum = smoothstep(0.0, uCornerLuminanceThreshold, lum);
+            // --- Simple Grayscale Dithering ---
+            // Compare luminance to the threshold. If brighter, output white, else black.
+            // float ditheredLuminance = (luminance > ditherThreshold) ? 1.0 : 0.0;
+            // vec3 finalColor = vec3(ditheredLuminance); // Grayscale output
 
-                // If the Bayer pattern value is LESS than the mapped luminance,
-                // make the pixel white. Otherwise, it stays the default black.
-                if (ditherPatternValue < mappedLum) {
-                     finalColor = vec3(1.0);
-                }
-            }
-            // else: (lum >= uCornerLuminanceThreshold - BRIGHT AREA) -> finalColor remains black
+            // --- Color Dithering Attempt (Basic Quantization + Dither) ---
+            // Reduce the number of color levels (e.g., 4 levels per channel)
+            float levels = 4.0;
+            vec3 quantizedColor = floor(originalColor.rgb * levels) / levels;
 
-            // Apply the frame color directly if it's green (simple check, might need refinement)
-            // This overrides the dithering for the frames.
-            // Check if original texture color is predominantly green
-             if (texColor.g > 0.5 && texColor.r < 0.3 && texColor.b < 0.3) {
-                 // Simple green/black dither for frames based on luminance? Or just green?
-                 // Let's just make frames green for now to distinguish them.
-                 finalColor = texColor.rgb; // Use original lit green frame color
-             }
+            // Calculate error and add scaled dither pattern
+            // This is a simplified approach; more advanced methods exist
+            vec3 error = originalColor.rgb - quantizedColor;
+            float ditherAmount = (ditherThreshold - 0.5) / levels; // Centered dither value
+
+            // Add dither based on error or directly (experiment!)
+            vec3 ditheredColor = clamp(quantizedColor + ditherAmount, 0.0, 1.0);
+            // vec3 ditheredColor = clamp(quantizedColor + error * (ditherThreshold * 2.0 - 1.0), 0.0, 1.0); // Error diffusion style (approx)
 
 
-            gl_FragColor = vec4(finalColor, texColor.a);
+            // --- Final Color Adjustment (Tinting towards yellow/brown) ---
+            // Mix the dithered color with a target tint color
+            vec3 tintColor = vec3(0.8, 0.65, 0.2); // Yellow/brown target
+            float tintAmount = 0.5; // How much tint to apply (0.0 to 1.0)
+            vec3 finalColor = mix(ditheredColor, tintColor * dot(ditheredColor, vec3(1.0))/1.5, tintAmount); // Mix based on brightness
+
+
+            // Output the final calculated color
+            gl_FragColor = vec4(finalColor, originalColor.a); // Keep original alpha
         }
     `
 };
-const cornerDitherPass = new ShaderPass(CornerDitheringShader);
-composer.addPass(cornerDitherPass);
-// --- END CORRECTION ---
+
+// Create a ShaderPass using the custom DitherShader
+const ditherPass = new ShaderPass(DitherShader);
+composer.addPass(ditherPass); // Add the pass to the composer pipeline
+// ------------------------------------
 
 
-// --- Animation Loop ---
+/**
+ * Animation Loop
+ */
 const clock = new THREE.Clock();
-let previousTime = 0;
-function animate() {
-    requestAnimationFrame(animate);
+
+const tick = () => {
     const elapsedTime = clock.getElapsedTime();
-    const deltaTime = elapsedTime - previousTime;
-    previousTime = elapsedTime;
-    // (Movement, Collision, Bobbing code remains the same)
-    let currentlyMovingForwardOrBackward = false;
-    const currentMoveSpeed = moveSpeed * deltaTime;
-    const moveDirection = new THREE.Vector3();
-    let applyMovement = false;
-    let collisionDetected = false;
-    if (keysPressed['KeyA'] || keysPressed['ArrowLeft']) { camera.rotation.y += turnSpeed * deltaTime; }
-    if (keysPressed['KeyD'] || keysPressed['ArrowRight']) { camera.rotation.y -= turnSpeed * deltaTime; }
-    if (keysPressed['KeyW'] || keysPressed['ArrowUp']) { moveDirection.set(0, 0, -1).applyEuler(camera.rotation); currentlyMovingForwardOrBackward = true; applyMovement = true; }
-    if (keysPressed['KeyS'] || keysPressed['ArrowDown']) { moveDirection.set(0, 0, 1).applyEuler(camera.rotation); currentlyMovingForwardOrBackward = true; applyMovement = true; }
-    if (applyMovement) {
-        const moveVector = moveDirection.clone().multiplyScalar(currentMoveSpeed);
-        const moveLength = moveVector.length();
-        raycaster.set(camera.position, moveDirection.normalize());
-        const intersects = raycaster.intersectObjects(collidableObjects);
-        if (intersects.length > 0 && intersects[0].distance < moveLength + playerRadius) {
-            collisionDetected = true;
-        }
-        if (!collisionDetected) {
-            camera.position.add(moveVector);
-        }
-    }
-    isMoving = currentlyMovingForwardOrBackward && !collisionDetected;
-     if (isMoving) {
-        const bobOffset = Math.sin(elapsedTime * bobFrequency * 2 * Math.PI) * bobAmplitude;
-        const potentialY = baseCameraY + bobOffset;
-        const ceilingLimit = roomHeight / 2 - playerRadius;
-        const floorLimit = -roomHeight / 2 + playerRadius;
-        camera.position.y = THREE.MathUtils.clamp(potentialY, floorLimit, ceilingLimit);
-    } else {
-        if (Math.abs(camera.position.y - baseCameraY) > 0.001) { camera.position.y += (baseCameraY - camera.position.y) * 0.1; }
-        else { camera.position.y = baseCameraY; }
-    }
-    camera.rotation.x = 0;
 
-    // Render using the composer
-    composer.render(deltaTime);
-}
+    // Update controls
+    controls.update();
+
+    // Render using the Effect Composer instead of the direct renderer
+    composer.render();
+    // renderer.render(scene, camera); // This line is replaced by composer.render()
+
+    // Call tick again on the next frame
+    window.requestAnimationFrame(tick);
+};
 
 
-// --- Handle Window Resize ---
+/**
+ * Resize Handling
+ */
 window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight); renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    composer.setSize(window.innerWidth, window.innerHeight);
-    composer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    if (cornerDitherPass && cornerDitherPass.uniforms.resolution) {
-        cornerDitherPass.uniforms.resolution.value.set(window.innerWidth * window.devicePixelRatio, window.innerHeight * window.devicePixelRatio);
-    }
+    // Update sizes
+    sizes.width = window.innerWidth;
+    sizes.height = window.innerHeight;
+
+    // Update camera aspect ratio
+    camera.aspect = sizes.width / sizes.height;
+    camera.updateProjectionMatrix();
+
+    // Update renderer size and pixel ratio
+    renderer.setSize(sizes.width, sizes.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Update Effect Composer size
+    composer.setSize(sizes.width, sizes.height);
+
+    // Update shader resolution uniform (important for pixel-based effects)
+    ditherPass.uniforms.uResolution.value.set(
+        sizes.width * renderer.getPixelRatio(),
+        sizes.height * renderer.getPixelRatio()
+    );
 });
 
-// --- Start Animation ---
-document.body.style.cursor = 'default';
-previousTime = clock.getElapsedTime();
-animate();
 
-console.log("Corrected corner dithering logic for mostly black walls.");
+// Start the animation loop
+tick();
