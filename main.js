@@ -86,7 +86,7 @@ window.addEventListener('DOMContentLoaded', () => {
         wallMaterial // Apply new wall material
     );
     room.position.y = 2.5; // Adjust position as needed
-    // scene.add(room); // Add your actual room/wall meshes here
+    scene.add(room); // Adding room/wallmesh to the scene
 
     // Add other elements (doors, windows, roof) applying appropriate materials
 
