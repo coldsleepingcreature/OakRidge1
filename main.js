@@ -230,7 +230,8 @@ window.addEventListener('DOMContentLoaded', () => {
         controls.update();
 
         // Render using the composer instead of the direct renderer
-        composer.render(); // <<<--- RENDER SCENE THROUGH COMPOSER
+        // composer.render(); // <<<--- RENDER SCENE THROUGH COMPOSER
+        renderer.render(scene, camera); // Render directly, bypassing post-processing
 
         // Call tick again on the next frame
         window.requestAnimationFrame(tick);
