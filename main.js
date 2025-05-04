@@ -167,7 +167,7 @@ window.addEventListener('DOMContentLoaded', () => {
     // (Make sure the lines that created the static 'plane' and 'room' are deleted or commented out)
     /*
     // Floor (OLD STATIC - REMOVE/COMMENT OUT)
-    const plane = new THREE.Mesh( /* ... */ );
+    // const plane = new THREE.Mesh( /* ... *///);
     // plane.position.y = -0.001;
     // scene.add(plane);
 
