@@ -176,8 +176,6 @@ window.addEventListener('DOMContentLoaded', () => {
     // const room = new THREE.Mesh( /* ... */ );
     // room.position.y = 2.5;
     // scene.add(room);
-    */
-
 
     /**
      * Animate (Keep as is, using direct renderer for now)
