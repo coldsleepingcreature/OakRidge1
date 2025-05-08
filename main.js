@@ -53,12 +53,37 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- END MODIFY ---
 
 
-    // --- Lights, Sizes, Camera, Controls, Renderer (Keep as is) ---
-    // ... (Lights) ...
-    // ... (Sizes) ...
-    // ... (Camera) ...
-    // ... (Controls) ...
-    // ... (Renderer) ...
+    // --- Lights ---
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5); // Soft white light
+    scene.add(ambientLight);
+
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    directionalLight.position.set(5, 10, 7.5);
+    scene.add(directionalLight);
+
+    // --- Sizes ---
+    const sizes = {
+        width: window.innerWidth,
+        height: window.innerHeight
+    };
+
+    // --- Camera ---
+    const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100);
+    camera.position.set(0, 5, 10);
+    scene.add(camera);
+
+    // --- Controls ---
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+
+    // --- Renderer ---
+    const renderer = new THREE.WebGLRenderer({
+        canvas: canvas,
+        antialias: true
+    });
+    renderer.setSize(sizes.width, sizes.height);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
 
     // --- Post Processing Setup (Keep definitions for later) ---
     // const DitherShader = { /* ... */ };
@@ -107,7 +132,18 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // --- Animation Loop Definition (Keep as is) ---
     const clock = new THREE.Clock();
-    function tick() { /* ... */ }
+    function tick() {
+        const elapsedTime = clock.getElapsedTime();
+
+        // Update controls
+        controls.update();
+
+        // Render
+        renderer.render(scene, camera);
+
+        // Call tick again on the next frame
+        window.requestAnimationFrame(tick);
+    }
 
 
     // --- ADD: Separate function to start animation ---
@@ -119,6 +155,18 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- END ADD ---
 
     // --- Resize Listener (Keep as is) ---
-    window.addEventListener('resize', () => { /* ... */ });
+    window.addEventListener('resize', () => {
+        // Update sizes
+        sizes.width = window.innerWidth;
+        sizes.height = window.innerHeight;
+
+        // Update camera
+        camera.aspect = sizes.width / sizes.height;
+        camera.updateProjectionMatrix();
+
+        // Update renderer
+        renderer.setSize(sizes.width, sizes.height);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    });
 
 }); // --- End of DOMContentLoaded listener ---
