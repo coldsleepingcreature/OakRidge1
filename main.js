@@ -130,10 +130,28 @@ window.addEventListener('DOMContentLoaded', () => {
     // --- END ADD ---
 
 
+    // --- Debugging: Add a simple cube to the scene ---
+    const geometry = new THREE.BoxGeometry(1, 1, 1);
+    const material = new THREE.MeshStandardMaterial({ color: 0x00ff00 });
+    const cube = new THREE.Mesh(geometry, material);
+    scene.add(cube);
+
+    // Log to confirm cube addition
+    console.log("Added a cube to the scene for debugging.");
+
+    // --- Debugging: Add console logs to verify initialization ---
+    console.log("Camera position:", camera.position);
+    console.log("Renderer size:", sizes.width, sizes.height);
+    console.log("Scene children count:", scene.children.length);
+
+
     // --- Animation Loop Definition (Keep as is) ---
     const clock = new THREE.Clock();
     function tick() {
         const elapsedTime = clock.getElapsedTime();
+
+        // Rotate the cube for visibility
+        cube.rotation.y = elapsedTime;
 
         // Update controls
         controls.update();
