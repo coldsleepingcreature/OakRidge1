@@ -215,7 +215,15 @@ window.addEventListener('DOMContentLoaded', () => {
         controls.update();
         
         // RENDER THROUGH COMPOSER (Not Renderer)
-        composer.render();
+        // DEBUGGING TOGGLING RENDERER
+        // --- DEBUG MODE: TOGGLE THESE LINES ---
+        // OPTION 1: "Bacon" Mode (Currently Active - Too Dark)
+        // composer.render();
+        
+        // OPTION 2: Raw Mode (Use this to verify geometry)
+        renderer.render(scene, camera);
+        
+        //composer.render();
         
         window.requestAnimationFrame(tick);
     };
