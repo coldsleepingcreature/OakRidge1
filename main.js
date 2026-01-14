@@ -107,10 +107,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
 
     // --- Lights ---
-    const ambientLight = new THREE.AmbientLight(0x403010, 0.6); // Dim, brownish
+    const ambientLight = new THREE.AmbientLight(0x403010, 4.0); // Dim, brownish
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffdDB0, 0.25);
+    const directionalLight = new THREE.DirectionalLight(0xffdDB0, 3.0);
     directionalLight.position.set(5, 10, 7.5);
     scene.add(directionalLight);
 
@@ -218,13 +218,11 @@ window.addEventListener('DOMContentLoaded', () => {
         // DEBUGGING TOGGLING RENDERER
         // --- DEBUG MODE: TOGGLE THESE LINES ---
         // OPTION 1: "Bacon" Mode (Currently Active - Too Dark)
-        // composer.render();
+        composer.render();
         
         // OPTION 2: Raw Mode (Use this to verify geometry)
-        renderer.render(scene, camera);
-        
-        //composer.render();
-        
+        //renderer.render(scene, camera);
+
         window.requestAnimationFrame(tick);
     };
 
