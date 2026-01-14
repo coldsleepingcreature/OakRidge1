@@ -11,7 +11,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const scene = new THREE.Scene();
 
     // Fog & Background (The "Bacon" Atmosphere)
-    const fogColor = 0x201808; // Dark brown/yellowish fog
+    const fogColor = 0x000000; // Dark brown/yellowish fog 0x201808 // NOW BLACK 0x000000
     scene.fog = new THREE.Fog(fogColor, 5, 30);
     scene.background = new THREE.Color(fogColor);
 
@@ -177,7 +177,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
             vec3 getPaletteColor(float lum) {
                 // High Art Palette (Browns/Golds)
-                if (lum < 0.2) return vec3(0.1, 0.08, 0.02);
+                if (lum < 0.2) return vec3(0.25, 0.15, 0.05);
                 else if (lum < 0.4) return vec3(0.3, 0.2, 0.05);
                 else if (lum < 0.6) return vec3(0.5, 0.35, 0.1);
                 else if (lum < 0.8) return vec3(0.7, 0.5, 0.15);
